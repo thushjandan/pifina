@@ -3,6 +3,10 @@
 /* TOFINO Native architecture */
 #include <t2na.p4>
 
+// Size of lookup table in bits. 7 bits = 127 entries
+#define PF_TABLE_SIZE_WIDTH 7
+#define PF_TABLE_SIZE 1<<PF_TABLE_SIZE_WIDTH
+
 const bit<16> TYPE_IPV4 = 0x800;
 
 /*************************************************************************
@@ -11,6 +15,8 @@ const bit<16> TYPE_IPV4 = 0x800;
 
 typedef bit<48> macAddr_t;
 typedef bit<32> ip4Addr_t;
+// jshint ignore:start
+typedef bit<PF_TABLE_SIZE_WIDTH> pf_stats_width_t;
 
 header ethernet_t {
     macAddr_t dstAddr;
@@ -33,14 +39,19 @@ header ipv4_t {
     ip4Addr_t dstAddr;
 }
 
-header tcp_h {
+header tcp_t {
     bit<16> src_port;
     bit<16> dst_port;
 }
 
-header udp_h {
+header udp_t {
     bit<16> src_port;
     bit<16> dst_port;
+}
+
+header pf_control_t {
+    bit<1> pfIsMatch;
+    pf_stats_width_t pfSessionId;
 }
 
 struct l4_lookup_t {
@@ -48,17 +59,29 @@ struct l4_lookup_t {
     bit<16> pfLayer4Word2; // Layer 4 source port
 }
 
-struct metadata {
+struct ingress_headers_t {
+    pf_control_t        pfControl;
+    ethernet_t          ethernet;
+    ipv4_t              ipv4;
+}
+
+struct ingress_metadata_t {
     bit<1> pfIsMatch;
+    pf_stats_width_t pfSessionId;
     bit<16> pfTargetProtocol;
     bit<128> pfDstAddr;
     bit<128> pfSrcAddr;
     l4_lookup_t pfL4Header;
 }
 
-struct headers {
+struct egress_headers_t {
     ethernet_t          ethernet;
     ipv4_t              ipv4;
+}
+
+struct egress_metadata_t {
+    bit<1> pfIsMatch;
+    pf_stats_width_t pfSessionId;
 }
 
 /*************************************************************************
@@ -66,8 +89,8 @@ struct headers {
 *************************************************************************/
 
 parser SwitchIngressParser(packet_in packet,
-                out headers hdr,
-                out metadata meta,
+                out ingress_headers_t hdr,
+                out ingress_metadata_t meta,
                 out ingress_intrinsic_metadata_t ig_intr_md) {
 
     state start {
@@ -75,6 +98,8 @@ parser SwitchIngressParser(packet_in packet,
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
 
+        meta.pfIsMatch = 0;
+        meta.pfSessionId = 0;
         meta.pfL4Header = {0, 0};
         meta.pfDstAddr = 0;
         meta.pfSrcAddr = 0;
@@ -110,18 +135,24 @@ parser SwitchIngressParser(packet_in packet,
 }
 
 parser SwitchEgressParser(packet_in packet,
-                out headers hdr,
-                out metadata meta,
+                out egress_headers_t hdr,
+                out egress_metadata_t meta,
                 out egress_intrinsic_metadata_t eg_intr_md) {
+
+    pf_control_t pfControlHeader;
 
     state start {
         /* TNA-specific Code for simple cases */
         packet.extract(eg_intr_md);
 
-        meta.pfL4Header = {0, 0};
-        meta.pfDstAddr = 0;
-        meta.pfSrcAddr = 0;
-        meta.pfTargetProtocol = 0;
+        transition parse_pfControl;
+    }
+
+    state parse_pfControl {
+        packet.extract(pfControlHeader);
+
+        meta.pfIsMatch = pfControlHeader.pfIsMatch;
+        meta.pfSessionId = pfControlHeader.pfSessionId;
 
         transition parse_ethernet;
     }
@@ -136,7 +167,7 @@ parser SwitchEgressParser(packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        meta.pfL4Header = packet.lookahead<l4_lookup_t>();
+
         transition accept;
     }
 }
@@ -145,8 +176,8 @@ parser SwitchEgressParser(packet_in packet,
 **************  I N G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
 
-control SwitchIngress(inout headers hdr,
-                  inout metadata meta,
+control SwitchIngress(inout ingress_headers_t hdr,
+                  inout ingress_metadata_t meta,
                   /* Intrinsic */
                   in ingress_intrinsic_metadata_t                     ig_intr_md, 
                   in ingress_intrinsic_metadata_from_parser_t         ig_prsr_md,
@@ -154,7 +185,7 @@ control SwitchIngress(inout headers hdr,
                   inout ingress_intrinsic_metadata_for_tm_t           ig_tm_md) {
     
     DirectCounter<bit<36>>(CounterType_t.PACKETS_AND_BYTES) pfIngressStartCounter;
-    DirectCounter<bit<36>>(CounterType_t.PACKETS_AND_BYTES) pfIngressEndCounter;    
+    Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfIngressEndCounter; 
 
     action drop() {
         ig_dprsr_md.drop_ctl = 0x1; // drop packet.
@@ -184,10 +215,10 @@ control SwitchIngress(inout headers hdr,
     /*
     sessionId is a number from 0-127 as table contains only 128 entries. Needs to be unique.
     */
-    action pf_start_measure(bit<7> sessionId) {
-        
+    action pf_start_ingress_measure(pf_stats_width_t sessionId) {
         pfIngressStartCounter.count();
-
+        meta.pfIsMatch = 1;
+        meta.pfSessionId = sessionId;
     }
 
     table pf_ig_start_selector {
@@ -199,32 +230,14 @@ control SwitchIngress(inout headers hdr,
             meta.pfL4Header.pfLayer4Word2: ternary;
         }
         actions = {
-            pf_start_measure;
+            pf_start_ingress_measure;
         }
         counters = pfIngressStartCounter;
         size = 128;
     }
 
-    action pf_end_measure() {
-        pfIngressEndCounter.count();
-
-    }
-
-    table pf_ig_end_selector {
-        key = {
-            meta.pfTargetProtocol: exact;
-            meta.pfDstAddr: ternary;
-            meta.pfSrcAddr: ternary;
-            meta.pfL4Header.pfLayer4Word1: ternary;
-            meta.pfL4Header.pfLayer4Word2: ternary;
-        }
-
-        actions = {
-            pf_end_measure;
-        }
-
-        counters = pfIngressEndCounter;
-        size = 128;
+    action pf_end_ingress_measure() {
+        pfIngressEndCounter.count(meta.pfSessionId);
     }
 
     apply {
@@ -235,7 +248,14 @@ control SwitchIngress(inout headers hdr,
         ipv4_lpm.apply();
 
         // End Ingress measurement
-        pf_ig_end_selector.apply();
+        if (meta.pfIsMatch == 0x1) {
+            pf_end_ingress_measure();
+        }
+
+        // Bridge metadata to egress pipeline
+        hdr.pfControl.setValid();
+        hdr.pfControl.pfIsMatch = meta.pfIsMatch;
+        hdr.pfControl.pfSessionId = meta.pfSessionId;
     }
 }
 
@@ -243,16 +263,35 @@ control SwitchIngress(inout headers hdr,
 ****************  E G R E S S   P R O C E S S I N G   *******************
 *************************************************************************/
 
-control SwitchEgress(inout headers hdr,
-                 inout metadata meta,
+control SwitchEgress(inout egress_headers_t hdr,
+                 inout egress_metadata_t meta,
                  /* Intrinsic */
                  in egress_intrinsic_metadata_t                      eg_intr_md,
                  in egress_intrinsic_metadata_from_parser_t          eg_prsr_md,
                  inout egress_intrinsic_metadata_for_deparser_t      eg_dprsr_md,
                  inout egress_intrinsic_metadata_for_output_port_t   eg_oport_md) {
 
-    apply {
+    Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressStartCounter;
+    Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressEndCounter;
 
+    action pf_start_egress_measure() {
+        pfEgressStartCounter.count(meta.pfSessionId);
+    }
+
+    action pf_end_egress_measure() {
+        pfEgressEndCounter.count(meta.pfSessionId);
+    }
+
+    apply {
+        // Start Egress measurement
+        if (meta.pfIsMatch == 0x1) {
+            pf_start_egress_measure();
+        }
+
+        // End Egress measurement
+        if (meta.pfIsMatch == 0x1) {
+            pf_end_egress_measure();
+        }
     }
 }
 
@@ -261,8 +300,8 @@ control SwitchEgress(inout headers hdr,
 *************************************************************************/
 
 control SwitchIngressDeparser(packet_out packet, 
-                              inout headers hdr,
-                              in metadata meta,
+                              inout ingress_headers_t hdr,
+                              in ingress_metadata_t meta,
                               /* Intrinsic */
                               in ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
@@ -284,14 +323,15 @@ control SwitchIngressDeparser(packet_out packet,
             hdr.ipv4.dstAddr 
         });
 
+        packet.emit(hdr.pfControl);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
     }
 }
 
 control SwitchEgressDeparser(packet_out packet,
-                             inout headers hdr,
-                             in metadata meta,
+                             inout egress_headers_t hdr,
+                             in egress_metadata_t meta,
                              /* Intrinsic */
                              in egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
     apply {
