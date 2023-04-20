@@ -50,7 +50,7 @@ header udp_t {
 }
 
 header pf_control_t {
-    bit<1> pfIsMatch;
+    bool pfIsMatch;
     pf_stats_width_t pfSessionId;
 }
 
@@ -66,8 +66,9 @@ struct ingress_headers_t {
 }
 
 struct ingress_metadata_t {
-    bit<1> pfIsMatch;
+    bool pfIsMatch;
     pf_stats_width_t pfSessionId;
+    bit<32> origHdrLength;
     bit<16> pfTargetProtocol;
     bit<128> pfDstAddr;
     bit<128> pfSrcAddr;
@@ -80,7 +81,7 @@ struct egress_headers_t {
 }
 
 struct egress_metadata_t {
-    bit<1> pfIsMatch;
+    bool pfIsMatch;
     pf_stats_width_t pfSessionId;
 }
 
@@ -98,11 +99,13 @@ parser SwitchIngressParser(packet_in packet,
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
 
-        meta.pfIsMatch = 0;
+        meta.pfIsMatch = false;
         meta.pfSessionId = 0;
         meta.pfL4Header = {0, 0};
         meta.pfDstAddr = 0;
         meta.pfSrcAddr = 0;
+        meta.pfTargetProtocol = 16w0;
+        meta.origHdrLength = 0;
 
         transition parse_ethernet;
     }
@@ -110,24 +113,28 @@ parser SwitchIngressParser(packet_in packet,
     state parse_ethernet {
         packet.extract(hdr.ethernet);
 
-        meta.pfDstAddr = (bit<128>)hdr.ethernet.dstAddr;
-        meta.pfSrcAddr = (bit<128>)hdr.ethernet.srcAddr;
-        meta.pfTargetProtocol = hdr.ethernet.etherType;
-
         transition select(hdr.ethernet.etherType) {
             TYPE_IPV4: parse_ipv4;
-            default: accept;
+            default: parse_post_ethernet;
         }
+    }
+
+    state parse_post_ethernet {
+        meta.pfDstAddr[47:0] = hdr.ethernet.dstAddr;
+        meta.pfSrcAddr[47:0] = hdr.ethernet.srcAddr;
+        meta.pfTargetProtocol = hdr.ethernet.etherType;
+
+        transition accept;
     }
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
 
-        meta.pfDstAddr = (bit<128>)hdr.ipv4.dstAddr;
-        meta.pfSrcAddr = (bit<128>)hdr.ipv4.srcAddr;
-        meta.pfTargetProtocol = 0;
-        meta.pfTargetProtocol = (bit<16>)hdr.ipv4.protocol;
         meta.pfL4Header = packet.lookahead<l4_lookup_t>();
+
+        meta.pfTargetProtocol[7:0] = hdr.ipv4.protocol;
+        meta.pfDstAddr[31:0] = hdr.ipv4.dstAddr;
+        meta.pfSrcAddr[31:0] = hdr.ipv4.srcAddr;
 
         transition accept;
     }
@@ -153,6 +160,7 @@ parser SwitchEgressParser(packet_in packet,
 
         meta.pfIsMatch = pfControlHeader.pfIsMatch;
         meta.pfSessionId = pfControlHeader.pfSessionId;
+        pfControlHeader.setInvalid();
 
         transition parse_ethernet;
     }
@@ -183,9 +191,22 @@ control SwitchIngress(inout ingress_headers_t hdr,
                   in ingress_intrinsic_metadata_from_parser_t         ig_prsr_md,
                   inout ingress_intrinsic_metadata_for_deparser_t     ig_dprsr_md,
                   inout ingress_intrinsic_metadata_for_tm_t           ig_tm_md) {
-    
+
     DirectCounter<bit<36>>(CounterType_t.PACKETS_AND_BYTES) pfIngressStartCounter;
-    Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfIngressEndCounter; 
+    // Header byte counter after TM
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressStartByteRegister; 
+    RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressStartByteRegister) pfIngressStartByteRegisterAction = {
+        void apply(inout bit<32> byteCount) {
+            byteCount = byteCount + meta.origHdrLength;
+        }
+    };
+    // Header byte counter BEFORE deparser
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
+    RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressEndByteRegister) pfIngressEndByteRegisterAction = {
+        void apply(inout bit<32> byteCount) {
+            byteCount = byteCount + sizeInBytes(hdr);
+        }
+    };
 
     action drop() {
         ig_dprsr_md.drop_ctl = 0x1; // drop packet.
@@ -217,13 +238,14 @@ control SwitchIngress(inout ingress_headers_t hdr,
     */
     action pf_start_ingress_measure(pf_stats_width_t sessionId) {
         pfIngressStartCounter.count();
-        meta.pfIsMatch = 1;
+        meta.pfIsMatch = true;
         meta.pfSessionId = sessionId;
+        pfIngressStartByteRegisterAction.execute(sessionId);
     }
 
     table pf_ig_start_selector {
         key = {
-            meta.pfTargetProtocol: exact;
+            meta.pfTargetProtocol: ternary;
             meta.pfDstAddr: ternary;
             meta.pfSrcAddr: ternary;
             meta.pfL4Header.pfLayer4Word1: ternary;
@@ -237,25 +259,27 @@ control SwitchIngress(inout ingress_headers_t hdr,
     }
 
     action pf_end_ingress_measure() {
-        pfIngressEndCounter.count(meta.pfSessionId);
-    }
-
-    apply {
-        // Start Ingress measurement
-        pf_ig_start_selector.apply();
-
-        // Run IPv4 routing logic.
-        ipv4_lpm.apply();
-
-        // End Ingress measurement
-        if (meta.pfIsMatch == 0x1) {
-            pf_end_ingress_measure();
-        }
+        pfIngressEndByteRegisterAction.execute(meta.pfSessionId);
 
         // Bridge metadata to egress pipeline
         hdr.pfControl.setValid();
         hdr.pfControl.pfIsMatch = meta.pfIsMatch;
         hdr.pfControl.pfSessionId = meta.pfSessionId;
+    }
+
+    apply {
+        // Start Ingress measurement
+        meta.origHdrLength = sizeInBytes(hdr);
+        pf_ig_start_selector.apply();
+
+        // Run IPv4 routing logic.
+        ipv4_lpm.apply();
+
+        // LAST Operation
+        // End Ingress measurement.
+        if (meta.pfIsMatch == true) {
+            pf_end_ingress_measure();
+        }
     }
 }
 
@@ -275,21 +299,22 @@ control SwitchEgress(inout egress_headers_t hdr,
     Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressEndCounter;
 
     action pf_start_egress_measure() {
-        pfEgressStartCounter.count(meta.pfSessionId);
+        // Decrement 1 byte overhead from bridge header
+        pfEgressStartCounter.count(meta.pfSessionId, 1);
     }
 
     action pf_end_egress_measure() {
-        pfEgressEndCounter.count(meta.pfSessionId);
+        pfEgressEndCounter.count(meta.pfSessionId, 1);
     }
 
     apply {
-        // Start Egress measurement
-        if (meta.pfIsMatch == 0x1) {
+        // Start Egress measurement. Using count leaving TM
+        if (meta.pfIsMatch == true) {
             pf_start_egress_measure();
         }
 
-        // End Egress measurement
-        if (meta.pfIsMatch == 0x1) {
+        // End Egress measurement. Using count from deparser
+        if (meta.pfIsMatch == true) {
             pf_end_egress_measure();
         }
     }
