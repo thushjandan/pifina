@@ -83,6 +83,7 @@ struct egress_headers_t {
 struct egress_metadata_t {
     bool pfIsMatch;
     pf_stats_width_t pfSessionId;
+    bit<32> pfPacketLength;
 }
 
 /*************************************************************************
@@ -161,6 +162,7 @@ parser SwitchEgressParser(packet_in packet,
         meta.pfIsMatch = pfControlHeader.pfIsMatch;
         meta.pfSessionId = pfControlHeader.pfSessionId;
         pfControlHeader.setInvalid();
+        meta.pfPacketLength = 0;
 
         transition parse_ethernet;
     }
@@ -269,6 +271,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
 
     apply {
         // Start Ingress measurement
+        // Capture original parsed header size
         meta.origHdrLength = sizeInBytes(hdr);
         pf_ig_start_selector.apply();
 
@@ -296,26 +299,30 @@ control SwitchEgress(inout egress_headers_t hdr,
                  inout egress_intrinsic_metadata_for_output_port_t   eg_oport_md) {
 
     Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressStartCounter;
-    Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressEndCounter;
+    // Header byte counter BEFORE deparser
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfEgressEndByteRegister; 
+    RegisterAction<bit<32>, pf_stats_width_t, void>(pfEgressEndByteRegister) pfEgressEndByteRegisterAction = {
+        void apply(inout bit<32> byteCount) {
+            byteCount = byteCount + meta.pfPacketLength;
+        }
+    };
 
     action pf_start_egress_measure() {
         // Decrement 1 byte overhead from bridge header
         pfEgressStartCounter.count(meta.pfSessionId, 1);
     }
 
-    action pf_end_egress_measure() {
-        pfEgressEndCounter.count(meta.pfSessionId, 1);
-    }
-
     apply {
         // Start Egress measurement. Using count leaving TM
         if (meta.pfIsMatch == true) {
+            meta.pfPacketLength = (bit<32>) eg_intr_md.pkt_length - sizeInBytes(hdr);
             pf_start_egress_measure();
         }
 
         // End Egress measurement. Using count from deparser
         if (meta.pfIsMatch == true) {
-            pf_end_egress_measure();
+            meta.pfPacketLength = meta.pfPacketLength + sizeInBytes(hdr);
+            pfEgressEndByteRegisterAction.execute(meta.pfSessionId);
         }
     }
 }
