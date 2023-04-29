@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-P4_PROG = "pf_poc" # replace with the current P4 program
+P4_PROG = "pifina" # replace with the current P4 program
 
 print("Starting setup for {prog}".format(prog=P4_PROG))
 
