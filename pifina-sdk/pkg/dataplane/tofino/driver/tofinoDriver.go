@@ -51,6 +51,10 @@ const (
 	PROBE_INGRESS_MATCH_ACTION_NAME           = "pf_start_ingress_measure"
 	PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID = "sessionId"
 	REGISTER_KEY_NAME                         = "$COUNTER_INDEX"
+	COUNTER_SPEC_BYTES                        = "$COUNTER_SPEC_BYTES"
+	COUNTER_SPEC_PKTS                         = "$COUNTER_SPEC_PKTS"
+	METRIC_BYTES                              = "METRIC_BYTES"
+	METRIC_PKTS                               = "METRIC_PKTS"
 )
 
 var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT}

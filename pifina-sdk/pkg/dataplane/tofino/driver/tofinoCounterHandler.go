@@ -2,7 +2,6 @@ package driver
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 )
@@ -60,12 +59,42 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 		)
 	}
 
+	// Send read request to switch.
 	entities, err := driver.SendReadRequest(tblEntries)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("%v", entities)
+	// Get key Ids
+	counterBytesKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_BYTES)
+	counterPktsKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_PKTS)
+	if counterBytesKeyId == 0 || counterPktsKeyId == 0 {
+		return nil, &ErrNameNotFound{Msg: "Cannot find key id for counter data type", Entity: COUNTER_SPEC_BYTES}
+	}
 
-	return nil, nil
+	// Transform response
+	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	for i := range entities {
+		sessionId := binary.BigEndian.Uint32(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
+		dataEntries := entities[i].GetTableEntry().GetData().GetFields()
+		for data_i := range dataEntries {
+			// If the key indicates a byte counter
+			if dataEntries[data_i].FieldId == counterBytesKeyId {
+				transformedMetrics = append(transformedMetrics, &MetricItem{
+					SessionId: sessionId,
+					Value:     binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:      METRIC_BYTES,
+				})
+			}
+			// If the key indicates a packet counter
+			if dataEntries[data_i].FieldId == counterPktsKeyId {
+				transformedMetrics = append(transformedMetrics, &MetricItem{
+					SessionId: sessionId,
+					Value:     binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:      METRIC_PKTS,
+				})
+			}
+		}
+	}
 
+	return transformedMetrics, nil
 }

@@ -153,6 +153,15 @@ func (driver *TofinoDriver) GetTableIdByName(tblName string) uint32 {
 	return tblId
 }
 
+// Find full table name by the short name of the table
+// e.g. PF_EGRESS_START_CNT => pipe.SwitchEgress.pfEgressStartProbe.PF_EGRESS_START_CNT
+func (driver *TofinoDriver) FindTableNameByShortName(shortName string) string {
+	if tblName, ok := driver.probeTableMap[shortName]; ok {
+		return tblName
+	}
+	return ""
+}
+
 func (driver *TofinoDriver) GetKeyIdByName(tblName, keyName string) uint32 {
 	keyId := uint32(0)
 	// Find table name in index

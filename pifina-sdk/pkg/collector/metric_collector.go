@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
 )
@@ -61,9 +63,13 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter() error {
 }
 
 func (collector *MetricCollector) CollectEgressStartCounter() error {
-	_, err := collector.driver.GetEgressStartCounter(collector.sessionIdCache)
+	metrics, err := collector.driver.GetEgressStartCounter(collector.sessionIdCache)
 	if err != nil {
 		return err
 	}
+	for _, item := range metrics {
+		fmt.Printf("%+v", *item)
+	}
+
 	return nil
 }

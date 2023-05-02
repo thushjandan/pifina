@@ -41,7 +41,23 @@ func (controller *TofinoController) StartController(ctx context.Context, connect
 	if err != nil {
 		return err
 	}
+
+	controller.EnableSyncOperationOnTables()
 	controller.collector.TriggerMetricCollection()
 
 	return nil
+}
+
+func (controller *TofinoController) EnableSyncOperationOnTables() {
+	for _, tbl := range driver.PROBE_TABLES {
+		tblName := controller.driver.FindTableNameByShortName(tbl)
+		if tblName == "" {
+			controller.logger.Error("Cannot find full table name", "table", tbl)
+			continue
+		}
+		err := controller.driver.EnableSyncOperationOnRegister(tblName)
+		if err != nil {
+			controller.logger.Error("Error occured when enabling sync operation on table", "table", tbl, "err", err)
+		}
+	}
 }
