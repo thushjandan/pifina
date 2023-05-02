@@ -1,7 +1,7 @@
 control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t meta) {
-
     DirectCounter<bit<36>>(CounterType_t.PACKETS_AND_BYTES) pfIngressStartCounter;
     // Header byte counter after TM
+    @name("PF_INGRESS_START_HDR_SIZE")
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressStartByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressStartByteRegister) pfIngressStartByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
@@ -19,6 +19,7 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
         pfIngressStartByteRegisterAction.execute(sessionId);
     }
 
+    @name("PF_INGRESS_MATCH_CNT")
     table pf_ig_start_selector {
         key = {
             hdr.ipv4.protocol: exact;
@@ -42,6 +43,7 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
 
 control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t meta) {
     // Header byte counter BEFORE deparser
+    @name("PF_INGRESS_END_HDR_SIZE")
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressEndByteRegister) pfIngressEndByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
@@ -68,6 +70,7 @@ control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t met
 }
 
 control PfEgressStartProbe(in egress_headers_t hdr, inout egress_metadata_t meta, in egress_intrinsic_metadata_t eg_intr_md) {
+    @name("PF_EGRESS_START_CNT")
     Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressStartCounter;
 
     action pf_start_egress_measure() {
@@ -85,6 +88,7 @@ control PfEgressStartProbe(in egress_headers_t hdr, inout egress_metadata_t meta
 
 control PfEgressEndProbe(in egress_headers_t hdr, inout egress_metadata_t meta) {
     // Header byte counter BEFORE deparser
+    @name("PF_EGRESS_END_CNT")
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfEgressEndByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfEgressEndByteRegister) pfEgressEndByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
