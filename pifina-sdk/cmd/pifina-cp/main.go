@@ -1,19 +1,24 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/utils"
+	"github.com/thushjandan/pifina/pkg/controller"
 )
 
 func main() {
 	logLevel := flag.String("level", "info", "set the log level. The default is info. Possible options: trace, debug, info, warn, error, off")
 	bfrt_endpoint := flag.String("bfrt", "127.0.0.1:50052", "BF runtime GRPC server address (Dataplane endpoint)")
+	p4_name := flag.String("p4name", "", "Name of the P4 application. e.g. myapp")
 	collector_server := flag.String("server", "127.0.0.1:8654", "PIFINA collector address")
 	version_flag := flag.Bool("version", false, "show version")
+	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
 
 	flag.Parse()
 
@@ -28,5 +33,22 @@ func main() {
 		Color: hclog.AutoColor,
 	})
 	logger.Debug("configured endpoints", "bfrt_endpoint", *bfrt_endpoint, "pifina_collector", *collector_server)
+
+	_, _, err := net.SplitHostPort(*bfrt_endpoint)
+	if err != nil {
+		logger.Error("Invalid BFRT address. example format 127.0.0.1:50052")
+		os.Exit(1)
+	}
+	if *p4_name == "" {
+		logger.Error("Invalid P4 app name. Specify the name of the running P4 application on the switch. e.g. myapp")
+		os.Exit(1)
+	}
+
+	ctx := context.Background()
+	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name)
+	err = controller.StartController(ctx, *connect_timeout)
+	if err != nil {
+		logger.Error("cannot start the controller", "err", err)
+	}
 
 }
