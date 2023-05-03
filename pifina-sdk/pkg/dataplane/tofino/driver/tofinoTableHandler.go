@@ -56,7 +56,7 @@ func (driver *TofinoDriver) GetSessionsFromMatchSelectors() ([]uint32, error) {
 		return nil, &ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
-	sessions := make([]uint32, len(entries))
+	sessions := make([]uint32, 0, len(entries))
 	for i := range entries {
 		actionFields := entries[i].GetTableEntry().GetData().GetFields()
 		for action_i := range actionFields {

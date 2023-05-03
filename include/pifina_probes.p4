@@ -2,10 +2,10 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
     DirectCounter<bit<36>>(CounterType_t.PACKETS_AND_BYTES) pfIngressStartCounter;
     // Header byte counter after TM
     @name("PF_INGRESS_START_HDR_SIZE")
-    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressStartByteRegister; 
-    RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressStartByteRegister) pfIngressStartByteRegisterAction = {
-        void apply(inout bit<32> byteCount) {
-            byteCount = byteCount + meta.pf_meta.pfOrigHdrLength;
+    Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressStartByteRegister; 
+    RegisterAction<bit<64>, pf_stats_width_t, void>(pfIngressStartByteRegister) pfIngressStartByteRegisterAction = {
+        void apply(inout bit<64> byteCount) {
+            byteCount = byteCount + (bit<64>) meta.pf_meta.pfOrigHdrLength;
         }
     };
 
@@ -44,10 +44,10 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
 control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t meta) {
     // Header byte counter BEFORE deparser
     @name("PF_INGRESS_END_HDR_SIZE")
-    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
-    RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressEndByteRegister) pfIngressEndByteRegisterAction = {
-        void apply(inout bit<32> byteCount) {
-            byteCount = byteCount + sizeInBytes(hdr);
+    Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
+    RegisterAction<bit<64>, pf_stats_width_t, void>(pfIngressEndByteRegister) pfIngressEndByteRegisterAction = {
+        void apply(inout bit<64> byteCount) {
+            byteCount = byteCount + (bit<64>) sizeInBytes(hdr);
         }
     };
 

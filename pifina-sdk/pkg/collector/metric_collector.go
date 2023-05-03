@@ -52,7 +52,12 @@ func (collector *MetricCollector) TriggerMetricCollection() {
 	}
 	err = collector.CollectEgressStartCounter()
 	if err != nil {
-		collector.logger.Error("Error occured during collection of Egress Start Match table counter", "err", err)
+		collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
+		return
+	}
+	err = collector.CollectEgressEndCounter()
+	if err != nil {
+		collector.logger.Error("Error occured during collection of Egress End counter", "err", err)
 		return
 	}
 
@@ -68,8 +73,20 @@ func (collector *MetricCollector) CollectEgressStartCounter() error {
 		return err
 	}
 	for _, item := range metrics {
-		fmt.Printf("%+v", *item)
+		fmt.Printf("%+v\n", *item)
 	}
 
+	return nil
+}
+
+func (collector *MetricCollector) CollectEgressEndCounter() error {
+	metrics, err := collector.driver.GetEgressEndCounter(collector.sessionIdCache)
+	if err != nil {
+		return err
+	}
+	fmt.Println()
+	for _, item := range metrics {
+		fmt.Printf("%+v\n", *item)
+	}
 	return nil
 }
