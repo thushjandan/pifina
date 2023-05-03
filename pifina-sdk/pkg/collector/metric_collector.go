@@ -50,6 +50,16 @@ func (collector *MetricCollector) TriggerMetricCollection() {
 		collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
 		return
 	}
+	err = collector.CollectIngressHdrStartCounter()
+	if err != nil {
+		collector.logger.Error("Error occured during collection of Ingress header start size counter", "err", err)
+		return
+	}
+	err = collector.CollectIngressHdrEndCounter()
+	if err != nil {
+		collector.logger.Error("Error occured during collection of Ingress header end size counter", "err", err)
+		return
+	}
 	err = collector.CollectEgressStartCounter()
 	if err != nil {
 		collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
@@ -64,6 +74,35 @@ func (collector *MetricCollector) TriggerMetricCollection() {
 }
 
 func (collector *MetricCollector) CollectIngressStartMatchCounter() error {
+	metrics, err := collector.driver.GetIngressStartMatchSelectorCounter()
+	if err != nil {
+		return err
+	}
+	for _, item := range metrics {
+		fmt.Printf("%+v\n", *item)
+	}
+	return nil
+}
+
+func (collector *MetricCollector) CollectIngressHdrStartCounter() error {
+	metrics, err := collector.driver.GetIngressHdrStartCounter(collector.sessionIdCache)
+	if err != nil {
+		return err
+	}
+	for _, item := range metrics {
+		fmt.Printf("%+v\n", *item)
+	}
+	return nil
+}
+
+func (collector *MetricCollector) CollectIngressHdrEndCounter() error {
+	metrics, err := collector.driver.GetIngressHdrEndCounter(collector.sessionIdCache)
+	if err != nil {
+		return err
+	}
+	for _, item := range metrics {
+		fmt.Printf("%+v\n", *item)
+	}
 	return nil
 }
 
@@ -84,7 +123,6 @@ func (collector *MetricCollector) CollectEgressEndCounter() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println()
 	for _, item := range metrics {
 		fmt.Printf("%+v\n", *item)
 	}

@@ -6,16 +6,41 @@ import (
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 )
 
+// Retrieve Ingress End header byte counter by a list of sessionIds.
+// The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
+func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*MetricItem, error) {
+	driver.logger.Debug("Requesting Ingress start header byte counter", "sessionIds", sessionIds)
+
+	return driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE, METRIC_HDR_BYTES)
+}
+
+// Retrieve Ingress End header byte counter by a list of sessionIds.
+// The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
+func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*MetricItem, error) {
+	driver.logger.Debug("Requesting Ingress end header byte counter", "sessionIds", sessionIds)
+
+	return driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE, METRIC_HDR_BYTES)
+}
+
+// Retrieve Egress End packet byte counter by a list of sessionIds.
+// Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*MetricItem, error) {
+	driver.logger.Debug("Requesting Egress end byte counter", "sessionIds", sessionIds)
+	return driver.GetMetricFromRegister(sessionIds, PROBE_EGRESS_END_CNT, METRIC_BYTES)
+}
+
+// Retrieves register values by a list of sessionIds, which are used as index.
+func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblName string, metricType string) ([]*MetricItem, error) {
+	// If an empty list is given, then there is no need to request the dataplane for metrics.
 	if len(sessionIds) == 0 {
 		driver.logger.Debug("Given list of session ids is empty. Skipping collecting egress end counter.")
 		return nil, nil
 	}
 
-	tblName := driver.FindTableNameByShortName(PROBE_EGRESS_END_CNT)
+	tblName := driver.FindTableNameByShortName(shortTblName)
 
 	if tblName == "" {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_EGRESS_END_CNT}
+		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
@@ -60,7 +85,6 @@ func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*MetricI
 			},
 		)
 	}
-	driver.logger.Debug("Requesting Egress start counter", "sessionIds", sessionIds)
 
 	// Send read request to switch.
 	entities, err := driver.SendReadRequest(tblEntries)
@@ -83,7 +107,7 @@ func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*MetricI
 			transformedMetrics = append(transformedMetrics, &MetricItem{
 				SessionId: sessionId,
 				Value:     uint64(decodedValue),
-				Type:      METRIC_BYTES,
+				Type:      metricType,
 			})
 		}
 	}

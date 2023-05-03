@@ -6,6 +6,7 @@ import (
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 )
 
+// Retrieve egress start packet counter by a list of sessionIds, which are used as index
 func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*MetricItem, error) {
 	if len(sessionIds) == 0 {
 		driver.logger.Debug("Given list of session ids is empty. Skipping collecting egress start counter.")
@@ -14,7 +15,7 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 
 	tblName, ok := driver.probeTableMap[PROBE_EGRESS_START_CNT]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_EGRESS_START_CNT}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
@@ -59,7 +60,7 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 			},
 		)
 	}
-	driver.logger.Debug("Requesting Ingress start match selector table counter", "sessionIds", sessionIds)
+	driver.logger.Debug("Requesting Egress start byte counter", "sessionIds", sessionIds)
 
 	// Send read request to switch.
 	entities, err := driver.SendReadRequest(tblEntries)

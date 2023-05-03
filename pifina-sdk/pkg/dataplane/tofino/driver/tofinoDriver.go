@@ -55,6 +55,7 @@ const (
 	COUNTER_SPEC_BYTES                        = "$COUNTER_SPEC_BYTES"
 	COUNTER_SPEC_PKTS                         = "$COUNTER_SPEC_PKTS"
 	METRIC_BYTES                              = "METRIC_BYTES"
+	METRIC_HDR_BYTES                          = "METRIC_HDR_BYTES"
 	METRIC_PKTS                               = "METRIC_PKTS"
 )
 
