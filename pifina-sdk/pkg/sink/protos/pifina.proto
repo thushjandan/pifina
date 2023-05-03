@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package pifina;
+
+message PifinaTelemetryMessage {
+    string sourceHost = 1;
+    repeated PifinaMetric metrics = 2;
+}
+
+message PifinaMetric {
+    uint32 sessionId = 1;
+    uint64 value = 2;
+    string valueType = 3;
+    string metricName = 4;
+}

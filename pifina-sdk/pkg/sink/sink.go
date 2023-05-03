@@ -1,0 +1,69 @@
+package sink
+
+import (
+	"net"
+	"os"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
+)
+
+type Sink struct {
+	logger         hclog.Logger
+	pifinaEndpoint string
+	mySystemName   string
+}
+
+func NewSink(logger hclog.Logger, pifinaEndpoint string) *Sink {
+	logger = logger.Named("sink")
+	hostname, err := os.Hostname()
+	if err != nil {
+		logger.Error("Cannot retrieve system hostname. setting system name to unknown")
+		hostname = "unknown"
+	}
+	return &Sink{
+		logger:         logger,
+		pifinaEndpoint: pifinaEndpoint,
+		mySystemName:   hostname,
+	}
+}
+
+// Transforms the payload to protobuf and sends to pifina server
+func (s *Sink) Emit(metrics []*driver.MetricItem) error {
+	protobufMetrics := ConvertMetricsToProtobuf(metrics)
+	telemetryPayload := &pifina.PifinaTelemetryMessage{
+		SourceHost: s.mySystemName,
+		Metrics:    protobufMetrics,
+	}
+
+	// Convert to byte string
+	data, err := proto.Marshal(telemetryPayload)
+	if err != nil {
+		return err
+	}
+
+	// Resolve UDP address
+	udpAddr, err := net.ResolveUDPAddr("udp", s.pifinaEndpoint)
+	if err != nil {
+		return err
+	}
+
+	// Connect to Pifina Server
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
+	// Send metrics to server
+	_, err = conn.Write([]byte(data))
+	if err != nil {
+		return err
+	}
+
+	return nil
+
+}

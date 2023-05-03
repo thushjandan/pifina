@@ -105,9 +105,10 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 				continue
 			}
 			transformedMetrics = append(transformedMetrics, &MetricItem{
-				SessionId: sessionId,
-				Value:     uint64(decodedValue),
-				Type:      metricType,
+				SessionId:  sessionId,
+				Value:      uint64(decodedValue),
+				Type:       metricType,
+				MetricName: shortTblName,
 			})
 		}
 	}

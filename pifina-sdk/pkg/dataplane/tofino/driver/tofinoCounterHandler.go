@@ -83,17 +83,19 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 			// If the key indicates a byte counter
 			if dataEntries[data_i].FieldId == counterBytesKeyId {
 				transformedMetrics = append(transformedMetrics, &MetricItem{
-					SessionId: sessionId,
-					Value:     binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:      METRIC_BYTES,
+					SessionId:  sessionId,
+					Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:       METRIC_BYTES,
+					MetricName: PROBE_EGRESS_START_CNT,
 				})
 			}
 			// If the key indicates a packet counter
 			if dataEntries[data_i].FieldId == counterPktsKeyId {
 				transformedMetrics = append(transformedMetrics, &MetricItem{
-					SessionId: sessionId,
-					Value:     binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:      METRIC_PKTS,
+					SessionId:  sessionId,
+					Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:       METRIC_PKTS,
+					MetricName: PROBE_EGRESS_START_CNT,
 				})
 			}
 		}

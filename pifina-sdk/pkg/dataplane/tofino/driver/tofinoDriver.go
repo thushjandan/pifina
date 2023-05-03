@@ -28,9 +28,10 @@ type TofinoDriver struct {
 }
 
 type MetricItem struct {
-	SessionId uint32
-	Type      string
-	Value     uint64
+	SessionId  uint32
+	Type       string
+	Value      uint64
+	MetricName string
 }
 
 type ErrNameNotFound struct {
