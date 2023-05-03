@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/collector"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/sink"
 )
 
 type TofinoController struct {
@@ -15,17 +16,20 @@ type TofinoController struct {
 	p4name    string
 	driver    *driver.TofinoDriver
 	collector *collector.MetricCollector
+	sink      *sink.Sink
 }
 
-func NewTofinoController(logger hclog.Logger, endpoint string, p4name string) *TofinoController {
+func NewTofinoController(logger hclog.Logger, endpoint string, p4name string, collectorServerEndpoint string) *TofinoController {
 	driver := driver.NewTofinoDriver(logger)
 	collector := collector.NewMetricCollector(logger, driver)
+	sink := sink.NewSink(logger, collectorServerEndpoint)
 	return &TofinoController{
 		logger:    logger.Named("controller"),
 		driver:    driver,
 		collector: collector,
 		endpoint:  endpoint,
 		p4name:    p4name,
+		sink:      sink,
 	}
 }
 
@@ -43,7 +47,11 @@ func (controller *TofinoController) StartController(ctx context.Context, connect
 	}
 
 	controller.EnableSyncOperationOnTables()
-	controller.collector.TriggerMetricCollection()
+	metrics := controller.collector.TriggerMetricCollection()
+	err = controller.sink.Emit(metrics)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

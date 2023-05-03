@@ -45,7 +45,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name)
+	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name, *collector_server)
 	err = controller.StartController(ctx, *connect_timeout)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)

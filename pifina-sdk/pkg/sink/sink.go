@@ -39,6 +39,7 @@ func (s *Sink) Emit(metrics []*driver.MetricItem) error {
 	}
 
 	// Convert to byte string
+	s.logger.Debug("Marshalling metrics to protobuf")
 	data, err := proto.Marshal(telemetryPayload)
 	if err != nil {
 		return err
@@ -63,7 +64,7 @@ func (s *Sink) Emit(metrics []*driver.MetricItem) error {
 	if err != nil {
 		return err
 	}
+	s.logger.Debug("Metrics has been sent to pifina server", "server", s.pifinaEndpoint)
 
 	return nil
-
 }

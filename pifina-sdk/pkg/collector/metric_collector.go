@@ -1,8 +1,6 @@
 package collector
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
 )
@@ -35,96 +33,69 @@ func (collector *MetricCollector) GetSessionIdCache() []uint32 {
 	return collector.sessionIdCache
 }
 
-func (collector *MetricCollector) TriggerMetricCollection() {
+func (collector *MetricCollector) TriggerMetricCollection() []*driver.MetricItem {
 	// If sessionId cache is empty, then refresh the cache
 	if collector.sessionIdCache == nil {
 		err := collector.LoadSessionsFromDevice()
 		if err != nil {
 			collector.logger.Error("Error occured during collection. Cannot retrieve sessionIds from Ingress Start Match table", "err", err)
-			return
+			return nil
 		}
 	}
 
-	err := collector.CollectIngressStartMatchCounter()
+	metrics, err := collector.CollectIngressStartMatchCounter()
 	if err != nil {
 		collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
-		return
+		metrics = make([]*driver.MetricItem, 0)
 	}
-	err = collector.CollectIngressHdrStartCounter()
+
+	tmpMetrics, err := collector.CollectIngressHdrStartCounter()
 	if err != nil {
 		collector.logger.Error("Error occured during collection of Ingress header start size counter", "err", err)
-		return
+	} else {
+		metrics = append(metrics, tmpMetrics...)
 	}
-	err = collector.CollectIngressHdrEndCounter()
+
+	tmpMetrics, err = collector.CollectIngressHdrEndCounter()
 	if err != nil {
 		collector.logger.Error("Error occured during collection of Ingress header end size counter", "err", err)
-		return
+	} else {
+		metrics = append(metrics, tmpMetrics...)
 	}
-	err = collector.CollectEgressStartCounter()
+
+	tmpMetrics, err = collector.CollectEgressStartCounter()
 	if err != nil {
 		collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
-		return
+	} else {
+		metrics = append(metrics, tmpMetrics...)
 	}
-	err = collector.CollectEgressEndCounter()
+
+	tmpMetrics, err = collector.CollectEgressEndCounter()
 	if err != nil {
 		collector.logger.Error("Error occured during collection of Egress End counter", "err", err)
-		return
+	} else {
+		metrics = append(metrics, tmpMetrics...)
 	}
 
+	return metrics
 }
 
-func (collector *MetricCollector) CollectIngressStartMatchCounter() error {
-	metrics, err := collector.driver.GetIngressStartMatchSelectorCounter()
-	if err != nil {
-		return err
-	}
-	for _, item := range metrics {
-		fmt.Printf("%+v\n", *item)
-	}
-	return nil
+func (collector *MetricCollector) CollectIngressStartMatchCounter() ([]*driver.MetricItem, error) {
+	return collector.driver.GetIngressStartMatchSelectorCounter()
 }
 
-func (collector *MetricCollector) CollectIngressHdrStartCounter() error {
-	metrics, err := collector.driver.GetIngressHdrStartCounter(collector.sessionIdCache)
-	if err != nil {
-		return err
-	}
-	for _, item := range metrics {
-		fmt.Printf("%+v\n", *item)
-	}
-	return nil
+func (collector *MetricCollector) CollectIngressHdrStartCounter() ([]*driver.MetricItem, error) {
+	return collector.driver.GetIngressHdrStartCounter(collector.sessionIdCache)
 }
 
-func (collector *MetricCollector) CollectIngressHdrEndCounter() error {
-	metrics, err := collector.driver.GetIngressHdrEndCounter(collector.sessionIdCache)
-	if err != nil {
-		return err
-	}
-	for _, item := range metrics {
-		fmt.Printf("%+v\n", *item)
-	}
-	return nil
+func (collector *MetricCollector) CollectIngressHdrEndCounter() ([]*driver.MetricItem, error) {
+	return collector.driver.GetIngressHdrEndCounter(collector.sessionIdCache)
 }
 
-func (collector *MetricCollector) CollectEgressStartCounter() error {
-	metrics, err := collector.driver.GetEgressStartCounter(collector.sessionIdCache)
-	if err != nil {
-		return err
-	}
-	for _, item := range metrics {
-		fmt.Printf("%+v\n", *item)
-	}
-
-	return nil
+func (collector *MetricCollector) CollectEgressStartCounter() ([]*driver.MetricItem, error) {
+	return collector.driver.GetEgressStartCounter(collector.sessionIdCache)
 }
 
-func (collector *MetricCollector) CollectEgressEndCounter() error {
-	metrics, err := collector.driver.GetEgressEndCounter(collector.sessionIdCache)
-	if err != nil {
-		return err
-	}
-	for _, item := range metrics {
-		fmt.Printf("%+v\n", *item)
-	}
-	return nil
+func (collector *MetricCollector) CollectEgressEndCounter() ([]*driver.MetricItem, error) {
+	return collector.driver.GetEgressEndCounter(collector.sessionIdCache)
 }
