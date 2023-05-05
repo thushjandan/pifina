@@ -84,7 +84,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 		// Terminate the for loop.
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Ingress Start Match table counter collector...")
-			break
+			return
 		}
 	}
 }
@@ -105,7 +105,7 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Ingress header start size counter collector...")
-			break
+			return
 		}
 	}
 }
@@ -126,7 +126,7 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Ingress header end size counter collector...")
-			break
+			return
 		}
 	}
 }
@@ -148,7 +148,7 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Egress start counter collector...")
-			break
+			return
 		}
 	}
 
@@ -171,7 +171,7 @@ func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, w
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Egress end counter collector...")
-			break
+			return
 		}
 	}
 

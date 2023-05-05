@@ -49,11 +49,12 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 
 	controller.EnableSyncOperationOnTables()
 	metricDataChannel := make(chan driver.MetricItem)
-	metrics := controller.collector.TriggerMetricCollection(ctx, *wg, metricDataChannel)
-	err = controller.sink.Emit(metrics)
+	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
+	<-ctx.Done()
+	/*err = controller.sink.Emit(metrics)
 	if err != nil {
 		return err
-	}
+	}*/
 
 	return nil
 }
