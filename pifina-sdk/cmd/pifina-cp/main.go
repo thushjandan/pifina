@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/utils"
@@ -44,11 +47,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := context.Background()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	var wg sync.WaitGroup
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+
 	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name, *collector_server)
-	err = controller.StartController(ctx, *connect_timeout)
+	err = controller.StartController(ctx, &wg, *connect_timeout)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)
 	}
 
+	// Block until a termination signal has received and all threads gracefully shutdown
+	wg.Wait()
+	logger.Info("Graceful shutdown completed. Bye!")
 }

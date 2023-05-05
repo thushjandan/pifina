@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/collector"
@@ -33,7 +34,7 @@ func NewTofinoController(logger hclog.Logger, endpoint string, p4name string, co
 	}
 }
 
-func (controller *TofinoController) StartController(ctx context.Context, connectTimeout int) error {
+func (controller *TofinoController) StartController(ctx context.Context, wg *sync.WaitGroup, connectTimeout int) error {
 	controller.ctx = ctx
 	// Connect to switch
 	err := controller.driver.Connect(ctx, controller.endpoint, controller.p4name, connectTimeout)
@@ -47,7 +48,8 @@ func (controller *TofinoController) StartController(ctx context.Context, connect
 	}
 
 	controller.EnableSyncOperationOnTables()
-	metrics := controller.collector.TriggerMetricCollection()
+	metricDataChannel := make(chan driver.MetricItem)
+	metrics := controller.collector.TriggerMetricCollection(ctx, *wg, metricDataChannel)
 	err = controller.sink.Emit(metrics)
 	if err != nil {
 		return err
