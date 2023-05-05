@@ -53,6 +53,7 @@ type ActionSpec struct {
 	ActionScope string       `json:"action_scope"`
 	Annotations []Annotation `json:"annotations"`
 	Data        []Field      `json:"data"`
+	Type        Type         `json:"type"`
 }
 
 type Annotation struct {

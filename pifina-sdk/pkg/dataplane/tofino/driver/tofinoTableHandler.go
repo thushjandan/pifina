@@ -102,7 +102,7 @@ func (driver *TofinoDriver) GetMatchSelectorEntries() ([]*bfruntime.Entity, erro
 	return entities, err
 }
 
-// Retrieve all MatchSelectorEntries from device
+// Retrieve a list of configured session Id from device
 func (driver *TofinoDriver) GetSessionsFromMatchSelectors() ([]uint32, error) {
 	entries, err := driver.GetMatchSelectorEntries()
 	if err != nil {
@@ -144,4 +144,25 @@ func (driver *TofinoDriver) GetSessionsFromMatchSelectors() ([]uint32, error) {
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i] < sessions[j] })
 
 	return sessions, err
+}
+
+// Returns the width of the sessionId parameter
+// Needed to generate new sessionId or to define the size of the bufferpool
+func (driver *TofinoDriver) GetSessionIdBitWidth() (uint32, error) {
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return 0, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return 0, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	sessionIdWidth := driver.GetActionDataWidthByName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
+	if sessionIdWidth == 0 {
+		return 0, &ErrNameNotFound{Msg: "Cannot find sessionId width on the device", Entity: tblName}
+	}
+
+	return sessionIdWidth, nil
 }

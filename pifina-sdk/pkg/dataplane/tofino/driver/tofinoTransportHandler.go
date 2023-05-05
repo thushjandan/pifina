@@ -190,6 +190,20 @@ func (driver *TofinoDriver) GetActionIdByName(tblName, actionName string) uint32
 	return actionId
 }
 
+func (driver *TofinoDriver) GetActionDataWidthByName(tblName, actionName string) uint32 {
+	actionDataWidth := uint32(0)
+	// Find table name in index
+	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		for actionIdx := range driver.P4Tables[sliceIdx].ActionSpecs {
+			if driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Name == actionName {
+				return driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Type.Width
+			}
+		}
+	}
+	return actionDataWidth
+}
+
 // Find full action name of an action.
 func (driver *TofinoDriver) FindFullActionName(tblName, partialActionName string) string {
 	actionName := ""

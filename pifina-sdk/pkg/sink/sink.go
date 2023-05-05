@@ -1,8 +1,10 @@
 package sink
 
 import (
+	"context"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
@@ -28,6 +30,24 @@ func NewSink(logger hclog.Logger, pifinaEndpoint string) *Sink {
 		pifinaEndpoint: pifinaEndpoint,
 		mySystemName:   hostname,
 	}
+}
+
+func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*driver.MetricItem) error {
+	defer wg.Done()
+
+	for {
+		select {
+		case metrics := <-c:
+			err := s.Emit(metrics)
+			if err != nil {
+				s.logger.Error("Error occured the transmission of the metrics", "error", err)
+			}
+		case <-ctx.Done():
+			s.logger.Info("Stopping pifina sink...")
+			return nil
+		}
+	}
+
 }
 
 // Transforms the payload to protobuf and sends to pifina server
