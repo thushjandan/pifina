@@ -43,7 +43,11 @@ func (sl *SkipList) Set(key string, subKey uint32, value *driver.MetricItem) {
 
 	// Key already exists
 	if currentNode != nil && currentNode.key <= compositeKey {
-		currentNode.value.Value += value.Value
+		if currentNode.value.Type == driver.METRIC_EXT_VALUE {
+			currentNode.value.Value = value.Value
+		} else {
+			currentNode.value.Value += value.Value
+		}
 		return
 	}
 

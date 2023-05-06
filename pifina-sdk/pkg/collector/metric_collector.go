@@ -37,7 +37,7 @@ func (collector *MetricCollector) GetSessionIdCache() []uint32 {
 	return collector.sessionIdCache
 }
 
-func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg *sync.WaitGroup, metricSink chan driver.MetricItem) {
+func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	// If sessionId cache is empty, then refresh the cache
 	if collector.sessionIdCache == nil {
 		err := collector.LoadSessionsFromDevice()
@@ -48,22 +48,22 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	}
 
 	wg.Add(1)
-	go collector.CollectIngressStartMatchCounter(ctx, wg)
+	go collector.CollectIngressStartMatchCounter(ctx, wg, metricSink)
 
 	wg.Add(1)
-	go collector.CollectIngressHdrStartCounter(ctx, wg)
+	go collector.CollectIngressHdrStartCounter(ctx, wg, metricSink)
 
 	wg.Add(1)
-	go collector.CollectIngressHdrEndCounter(ctx, wg)
+	go collector.CollectIngressHdrEndCounter(ctx, wg, metricSink)
 
 	wg.Add(1)
-	go collector.CollectEgressStartCounter(ctx, wg)
+	go collector.CollectEgressStartCounter(ctx, wg, metricSink)
 
 	wg.Add(1)
-	go collector.CollectEgressEndCounter(ctx, wg)
+	go collector.CollectEgressEndCounter(ctx, wg, metricSink)
 }
 
-func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup) {
+func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	// Mark the context as done after exiting the routine.
 	defer wg.Done()
 
@@ -75,11 +75,14 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 		select {
 		// Got a tick from the ticker.
 		case <-ticker.C:
-			_, err := collector.driver.GetIngressStartMatchSelectorCounter()
+			metrics, err := collector.driver.GetIngressStartMatchSelectorCounter()
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
 			} else {
 				collector.logger.Debug("Collection of Ingress Start Match table counter has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
 			}
 		// Terminate the for loop.
 		case <-ctx.Done():
@@ -89,7 +92,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 	}
 }
 
-func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Context, wg *sync.WaitGroup) {
+func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(5 * time.Second)
@@ -97,11 +100,14 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 	for {
 		select {
 		case <-ticker.C:
-			_, err := collector.driver.GetIngressHdrStartCounter(collector.sessionIdCache)
+			metrics, err := collector.driver.GetIngressHdrStartCounter(collector.sessionIdCache)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header start size counter", "err", err)
 			} else {
 				collector.logger.Debug("Collection of Ingress header start size counter has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Ingress header start size counter collector...")
@@ -110,7 +116,7 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 	}
 }
 
-func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Context, wg *sync.WaitGroup) {
+func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(5 * time.Second)
@@ -118,11 +124,14 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 	for {
 		select {
 		case <-ticker.C:
-			_, err := collector.driver.GetIngressHdrEndCounter(collector.sessionIdCache)
+			metrics, err := collector.driver.GetIngressHdrEndCounter(collector.sessionIdCache)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header end size counter", "err", err)
 			} else {
 				collector.logger.Debug("Collection of Ingress header end size counter has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Ingress header end size counter collector...")
@@ -131,7 +140,7 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 	}
 }
 
-func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context, wg *sync.WaitGroup) {
+func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(5 * time.Second)
@@ -140,11 +149,14 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 	for {
 		select {
 		case <-ticker.C:
-			_, err := collector.driver.GetEgressStartCounter(collector.sessionIdCache)
+			metrics, err := collector.driver.GetEgressStartCounter(collector.sessionIdCache)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
 			} else {
 				collector.logger.Debug("Collection of Egress start counter has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Egress start counter collector...")
@@ -154,7 +166,7 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 
 }
 
-func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, wg *sync.WaitGroup) {
+func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(5 * time.Second)
@@ -163,11 +175,14 @@ func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, w
 	for {
 		select {
 		case <-ticker.C:
-			_, err := collector.driver.GetEgressEndCounter(collector.sessionIdCache)
+			metrics, err := collector.driver.GetEgressEndCounter(collector.sessionIdCache)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress End counter", "err", err)
 			} else {
 				collector.logger.Debug("Collection of Egress end counter has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Egress end counter collector...")

@@ -46,6 +46,7 @@ func TestCRUD(t *testing.T) {
 
 func BenchmarkRandomSet(b *testing.B) {
 	b.ReportAllocs()
+	// Using 2^12
 	max := int(math.Pow(2, float64(12)))
 	sl, err := NewSkiplistWithMaxBound(b.N)
 	if err != nil {

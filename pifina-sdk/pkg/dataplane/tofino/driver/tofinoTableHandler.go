@@ -159,8 +159,13 @@ func (driver *TofinoDriver) GetSessionIdBitWidth() (uint32, error) {
 		return 0, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
-	sessionIdWidth := driver.GetActionDataWidthByName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
-	if sessionIdWidth == 0 {
+	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
+	if actionName == "" {
+		return 0, &ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+	}
+
+	sessionIdWidth := driver.GetActionDataWidthByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
+	if sessionIdWidth < 1 {
 		return 0, &ErrNameNotFound{Msg: "Cannot find sessionId width on the device", Entity: tblName}
 	}
 

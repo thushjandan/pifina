@@ -142,6 +142,16 @@ func (driver *TofinoDriver) createNonP4TableIndex() {
 	}
 }
 
+// Check if an item is in the list of predefined probes
+func (driver *TofinoDriver) IsInProbeTable(item string) bool {
+	for i := range PROBE_TABLES {
+		if PROBE_TABLES[i] == item {
+			return true
+		}
+	}
+	return false
+}
+
 func (driver *TofinoDriver) GetTableIdByName(tblName string) uint32 {
 	tblId := uint32(0)
 	// Find table name in index
@@ -190,14 +200,18 @@ func (driver *TofinoDriver) GetActionIdByName(tblName, actionName string) uint32
 	return actionId
 }
 
-func (driver *TofinoDriver) GetActionDataWidthByName(tblName, actionName string) uint32 {
+func (driver *TofinoDriver) GetActionDataWidthByName(tblName, actionName string, dataName string) uint32 {
 	actionDataWidth := uint32(0)
 	// Find table name in index
 	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
 		// Table name has been found in hash table
 		for actionIdx := range driver.P4Tables[sliceIdx].ActionSpecs {
 			if driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Name == actionName {
-				return driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Type.Width
+				for dataIdx := range driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Data {
+					if driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Data[dataIdx].Name == dataName {
+						return driver.P4Tables[sliceIdx].ActionSpecs[actionIdx].Data[dataIdx].Type.Width
+					}
+				}
 			}
 		}
 	}

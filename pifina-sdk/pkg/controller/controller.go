@@ -5,19 +5,21 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/pkg/bufferpool"
 	"github.com/thushjandan/pifina/pkg/collector"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
 	"github.com/thushjandan/pifina/pkg/sink"
 )
 
 type TofinoController struct {
-	ctx       context.Context
-	logger    hclog.Logger
-	endpoint  string
-	p4name    string
-	driver    *driver.TofinoDriver
-	collector *collector.MetricCollector
-	sink      *sink.Sink
+	ctx           context.Context
+	logger        hclog.Logger
+	endpoint      string
+	p4name        string
+	driver        *driver.TofinoDriver
+	collector     *collector.MetricCollector
+	sink          *sink.Sink
+	metricStorage *bufferpool.SkipList
 }
 
 func NewTofinoController(logger hclog.Logger, endpoint string, p4name string, collectorServerEndpoint string) *TofinoController {
@@ -48,13 +50,17 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	}
 
 	controller.EnableSyncOperationOnTables()
-	metricDataChannel := make(chan driver.MetricItem)
+	metricDataChannel := make(chan *driver.MetricItem, 10)
 	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
 	metricsSinkChannel := make(chan []*driver.MetricItem)
 	wg.Add(1)
-	controller.sink.StartSink(ctx, wg, metricsSinkChannel)
+	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
+	wg.Add(1)
+	go controller.StartBufferpoolManager(ctx, wg, metricDataChannel)
 	// Block until a kill signal
 	<-ctx.Done()
+	close(metricDataChannel)
+	close(metricsSinkChannel)
 
 	return nil
 }

@@ -31,6 +31,7 @@ type Field struct {
 	MatchType   string         `json:"match_type"`
 	ReadOnly    bool           `json:"read_only"`
 	Singleton   SingletonField `json:"singleton"`
+	Type        Type           `json:"type"`
 }
 
 type SingletonField struct {
@@ -53,7 +54,6 @@ type ActionSpec struct {
 	ActionScope string       `json:"action_scope"`
 	Annotations []Annotation `json:"annotations"`
 	Data        []Field      `json:"data"`
-	Type        Type         `json:"type"`
 }
 
 type Annotation struct {
