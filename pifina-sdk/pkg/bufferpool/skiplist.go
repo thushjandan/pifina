@@ -2,6 +2,7 @@ package bufferpool
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"sync"
@@ -24,57 +25,32 @@ const (
 	DEFAULT_PROBABILITY float64 = 1 / math.E
 )
 
-// Inserts a new item in the skiplist
-// If the key exists, it ignores the request
-// Locking is optimistic and happens only after searching.
-func (sl *SkipList) SetMultiVal(key string) {
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
-
-	prevs := sl.getPrevElementNodes(key)
-	currentNode := prevs[0].next[0]
-
-	// Key already exists
-	if currentNode != nil && currentNode.key <= key {
-		return
-	}
-
-	node := &SkipListNode{
-		nodeHeader: nodeHeader{next: make([]*SkipListNode, sl.randLevel())},
-		key:        key,
-		multiVal:   make(map[uint32]driver.MetricItem),
-		nodeType:   SL_NODETYPE_MULTIVAL,
-	}
-
-	for i := range node.next {
-		node.next[i] = prevs[i].next[i]
-		prevs[i].next[i] = node
-	}
-
+func (sl *SkipList) getCompositeKey(key string, subKey uint32) string {
+	return fmt.Sprintf("%s%d", key, subKey)
 }
 
 // Inserts a new item in the skiplist
 // If the key exists, it ignores the request
 // Locking is optimistic and happens only after searching.
-func (sl *SkipList) SetSingleVal(key string, value driver.MetricItem) {
+func (sl *SkipList) Set(key string, subKey uint32, value *driver.MetricItem) {
+	compositeKey := sl.getCompositeKey(key, subKey)
+
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
 
-	prevs := sl.getPrevElementNodes(key)
+	prevs := sl.getPrevElementNodes(compositeKey)
 	currentNode := prevs[0].next[0]
 
 	// Key already exists
-	if currentNode != nil && currentNode.key <= key {
-		// Increment value if it already exists
-		currentNode.singleVal.Value += value.Value
+	if currentNode != nil && currentNode.key <= compositeKey {
+		currentNode.value.Value += value.Value
 		return
 	}
 
 	node := &SkipListNode{
 		nodeHeader: nodeHeader{next: make([]*SkipListNode, sl.randLevel())},
-		key:        key,
-		singleVal:  value,
-		nodeType:   SL_NODETYPE_SINGLEVAL,
+		key:        compositeKey,
+		value:      value,
 	}
 
 	for i := range node.next {
@@ -86,24 +62,25 @@ func (sl *SkipList) SetSingleVal(key string, value driver.MetricItem) {
 
 // Get finds an element by key. It returns element pointer if found, nil if not found.
 // Locking is optimistic and happens only after searching with a fast check for deletion after locking.
-func (list *SkipList) Get(key string) *SkipListNode {
-	list.mutex.Lock()
-	defer list.mutex.Unlock()
+func (sl *SkipList) Get(key string, subKey uint32) *SkipListNode {
+	compositeKey := sl.getCompositeKey(key, subKey)
+	sl.mutex.Lock()
+	defer sl.mutex.Unlock()
 
 	var nextNode *SkipListNode
 
-	prev := &list.root
+	prev := &sl.root
 
-	for i := list.maxLevel - 1; i >= 0; i-- {
+	for i := sl.maxLevel - 1; i >= 0; i-- {
 		nextNode = prev.next[i]
 
-		for nextNode != nil && key > nextNode.key {
+		for nextNode != nil && compositeKey > nextNode.key {
 			prev = &nextNode.nodeHeader
 			nextNode = nextNode.next[i]
 		}
 	}
 
-	if nextNode != nil && nextNode.key <= key {
+	if nextNode != nil && nextNode.key <= compositeKey {
 		return nextNode
 	}
 
@@ -113,16 +90,17 @@ func (list *SkipList) Get(key string) *SkipListNode {
 // Remove deletes an element from the list.
 // Returns removed element pointer if found, nil if not found.
 // Locking is optimistic and happens only after searching with a fast check on adjacent nodes after locking.
-func (list *SkipList) Remove(key string) {
-	list.mutex.Lock()
-	defer list.mutex.Unlock()
+func (sl *SkipList) Remove(key string, subKey uint32) {
+	compositeKey := sl.getCompositeKey(key, subKey)
+	sl.mutex.Lock()
+	defer sl.mutex.Unlock()
 
-	prevs := list.getPrevElementNodes(key)
+	prevs := sl.getPrevElementNodes(compositeKey)
 
 	node := prevs[0].next[0]
 
 	// found the element, remove it
-	if node != nil && node.key <= key {
+	if node != nil && node.key <= compositeKey {
 		for k, v := range node.next {
 			prevs[k].next[k] = v
 		}
@@ -190,6 +168,9 @@ func NewSkiplistWithMaxBound(upperBound int) (*SkipList, error) {
 	}
 
 	maxLevel := int(math.Ceil(math.Log(float64(upperBound))))
+	if maxLevel < 1 {
+		maxLevel = 1
+	}
 	probTable := createProbabilityTable(DEFAULT_PROBABILITY, maxLevel)
 	randSrc := rand.New(rand.NewSource(time.Now().UnixNano()))
 
