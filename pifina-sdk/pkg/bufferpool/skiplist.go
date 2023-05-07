@@ -19,6 +19,7 @@ type SkipList struct {
 	probability    float64
 	probTable      []float64
 	mutex          sync.RWMutex
+	length         int
 }
 
 const (
@@ -61,15 +62,14 @@ func (sl *SkipList) Set(key string, subKey uint32, value *driver.MetricItem) {
 		node.next[i] = prevs[i].next[i]
 		prevs[i].next[i] = node
 	}
-
+	// Increase skiplist length
+	sl.length++
 }
 
 // Get finds an element by key. It returns element pointer if found, nil if not found.
-// Locking is optimistic and happens only after searching with a fast check for deletion after locking.
+// Get is wait-free. Stale reads are possible, but this is accepted in our environment.
 func (sl *SkipList) Get(key string, subKey uint32) *SkipListNode {
 	compositeKey := sl.getCompositeKey(key, subKey)
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
 
 	var nextNode *SkipListNode
 
@@ -91,6 +91,25 @@ func (sl *SkipList) Get(key string, subKey uint32) *SkipListNode {
 	return nil
 }
 
+func (sl *SkipList) GetAllAndReset() []*driver.MetricItem {
+	nextNode := sl.root.next[0]
+
+	allItems := make([]*driver.MetricItem, 0, sl.length)
+
+	for nextNode != nil {
+		// Copy metric struct
+		newItem := *(nextNode.value)
+		// Reset values
+		if nextNode.value.Type != driver.METRIC_EXT_VALUE {
+			nextNode.value.Value = 0
+		}
+		allItems = append(allItems, &newItem)
+		nextNode = nextNode.next[0]
+	}
+
+	return allItems
+}
+
 // Remove deletes an element from the list.
 // Returns removed element pointer if found, nil if not found.
 // Locking is optimistic and happens only after searching with a fast check on adjacent nodes after locking.
@@ -108,7 +127,7 @@ func (sl *SkipList) Remove(key string, subKey uint32) {
 		for k, v := range node.next {
 			prevs[k].next[k] = v
 		}
-
+		sl.length--
 		return
 	}
 
@@ -181,6 +200,7 @@ func NewSkiplistWithMaxBound(upperBound int) (*SkipList, error) {
 	return &SkipList{
 		root:           nodeHeader{next: make([]*SkipListNode, maxLevel)},
 		prevNodesStack: make([]*nodeHeader, maxLevel),
+		length:         0,
 		maxLevel:       maxLevel,
 		randSource:     randSrc,
 		probability:    DEFAULT_PROBABILITY,

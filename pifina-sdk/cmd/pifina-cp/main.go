@@ -22,6 +22,7 @@ func main() {
 	collector_server := flag.String("server", "127.0.0.1:8654", "PIFINA collector address")
 	version_flag := flag.Bool("version", false, "show version")
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
+	sample_interval := flag.Int("sample-interval-ms", 1000, "Sample interval in ms. Default 100ms")
 
 	flag.Parse()
 
@@ -53,7 +54,7 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
-	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name, *collector_server)
+	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name, *collector_server, *sample_interval)
 	err = controller.StartController(ctx, &wg, *connect_timeout)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)

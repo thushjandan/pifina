@@ -22,9 +22,9 @@ type TofinoController struct {
 	metricStorage *bufferpool.SkipList
 }
 
-func NewTofinoController(logger hclog.Logger, endpoint string, p4name string, collectorServerEndpoint string) *TofinoController {
+func NewTofinoController(logger hclog.Logger, endpoint string, p4name string, collectorServerEndpoint string, sampleInterval int) *TofinoController {
 	driver := driver.NewTofinoDriver(logger)
-	collector := collector.NewMetricCollector(logger, driver)
+	collector := collector.NewMetricCollector(logger, driver, sampleInterval)
 	sink := sink.NewSink(logger, collectorServerEndpoint)
 	return &TofinoController{
 		logger:    logger.Named("controller"),
@@ -53,12 +53,13 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	metricDataChannel := make(chan *driver.MetricItem, 10)
 	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
 	metricsSinkChannel := make(chan []*driver.MetricItem)
-	wg.Add(1)
+	wg.Add(3)
 	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
-	wg.Add(1)
 	go controller.StartBufferpoolManager(ctx, wg, metricDataChannel)
+	go controller.StartSampleMetrics(ctx, wg)
 	// Block until a kill signal
 	<-ctx.Done()
+	// Close all channels
 	close(metricDataChannel)
 	close(metricsSinkChannel)
 

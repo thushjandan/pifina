@@ -13,12 +13,14 @@ type MetricCollector struct {
 	logger         hclog.Logger
 	driver         *driver.TofinoDriver
 	sessionIdCache []uint32
+	sampleInterval time.Duration
 }
 
-func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver) *MetricCollector {
+func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int) *MetricCollector {
 	return &MetricCollector{
-		logger: logger.Named("collector"),
-		driver: driver,
+		logger:         logger.Named("collector"),
+		driver:         driver,
+		sampleInterval: time.Duration(sampleInterval) * time.Millisecond,
 	}
 }
 
@@ -67,7 +69,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 	// Mark the context as done after exiting the routine.
 	defer wg.Done()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(collector.sampleInterval)
 	// Stop the ticker before leaving
 	defer ticker.Stop()
 
@@ -95,7 +97,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(collector.sampleInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -119,7 +121,7 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(collector.sampleInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -143,7 +145,7 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(collector.sampleInterval)
 	defer ticker.Stop()
 
 	for {
@@ -169,7 +171,7 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(collector.sampleInterval)
 	defer ticker.Stop()
 
 	for {

@@ -2,8 +2,10 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
+	"time"
 
 	"github.com/thushjandan/pifina/pkg/bufferpool"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
@@ -49,5 +51,25 @@ func (ctrl *TofinoController) addMetricToStorage(ctx context.Context, newMetricL
 		ctrl.metricStorage.Set(newMetricList.MetricName, newMetricList.SessionId, newMetricList)
 	} else {
 		ctrl.metricStorage.Set(newMetricList.MetricName, uint32(0), newMetricList)
+	}
+}
+
+func (ctrl *TofinoController) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			allItems := ctrl.metricStorage.GetAllAndReset()
+			for i := range allItems {
+				fmt.Printf("%+v\n", allItems[i])
+			}
+		case <-ctx.Done():
+			ctrl.logger.Info("Stopping metric sampler...")
+			return
+		}
 	}
 }
