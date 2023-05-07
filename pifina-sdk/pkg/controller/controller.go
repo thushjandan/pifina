@@ -76,6 +76,8 @@ func (controller *TofinoController) EnableSyncOperationOnTables() {
 		err := controller.driver.EnableSyncOperationOnRegister(tblName)
 		if err != nil {
 			controller.logger.Error("Error occured when enabling sync operation on table", "table", tbl, "err", err)
+		} else {
+			controller.logger.Info("Sync Table operation has been enabled on table", "table", tbl)
 		}
 	}
 }

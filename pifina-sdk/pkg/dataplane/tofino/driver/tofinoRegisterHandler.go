@@ -10,23 +10,43 @@ import (
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*MetricItem, error) {
 	driver.logger.Debug("Requesting Ingress start header byte counter", "sessionIds", sessionIds)
+	// Retrieve register values for selected sessionId
+	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE, METRIC_HDR_BYTES)
+	// If no errors have occured, reset the register
+	if err == nil {
+		// Reset register values
+		driver.ResetRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE)
+	}
 
-	return driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE, METRIC_HDR_BYTES)
+	return metrics, err
 }
 
 // Retrieve Ingress End header byte counter by a list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*MetricItem, error) {
 	driver.logger.Debug("Requesting Ingress end header byte counter", "sessionIds", sessionIds)
+	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE, METRIC_HDR_BYTES)
+	// If no errors have occured, reset the register
+	if err == nil {
+		// Reset register values
+		driver.ResetRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE)
+	}
 
-	return driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE, METRIC_HDR_BYTES)
+	return metrics, err
 }
 
 // Retrieve Egress End packet byte counter by a list of sessionIds.
 // Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*MetricItem, error) {
 	driver.logger.Debug("Requesting Egress end byte counter", "sessionIds", sessionIds)
-	return driver.GetMetricFromRegister(sessionIds, PROBE_EGRESS_END_CNT, METRIC_BYTES)
+	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_EGRESS_END_CNT, METRIC_BYTES)
+	// If no errors have occured, reset the register
+	if err == nil {
+		// Reset register values
+		driver.ResetRegister(sessionIds, PROBE_EGRESS_END_CNT)
+	}
+
+	return metrics, err
 }
 
 // Retrieves register values by a list of sessionIds, which are used as index.
@@ -66,6 +86,9 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 					TableEntry: &bfruntime.TableEntry{
 						TableId:        tblId,
 						IsDefaultEntry: false,
+						TableFlags: &bfruntime.TableFlags{
+							FromHw: true,
+						},
 						Value: &bfruntime.TableEntry_Key{
 							Key: &bfruntime.TableKey{
 								Fields: []*bfruntime.KeyField{
@@ -114,4 +137,29 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 	}
 
 	return transformedMetrics, nil
+}
+
+func (driver *TofinoDriver) ResetRegister(sessionIds []uint32, shortTbleName string) {
+	registerValueByteSize := 4
+	allResetReq := make([]*bfruntime.Update, 0)
+	// Build reset request
+	for _, id := range sessionIds {
+		resetReq, err := driver.getIndirectCounterResetRequest(shortTbleName, REGISTER_INDEX_KEY_NAME, id, []string{shortTbleName}, registerValueByteSize)
+		if err != nil {
+			driver.logger.Error("cannot build bfrt reset request", "tblName", shortTbleName, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+	}
+	if len(allResetReq) > 0 {
+		// Send reset requests
+		err := driver.SendWriteRequest(allResetReq)
+		if err != nil {
+			driver.logger.Error("Register reset has failed", "tblName", shortTbleName, "err", err)
+		}
+	}
 }

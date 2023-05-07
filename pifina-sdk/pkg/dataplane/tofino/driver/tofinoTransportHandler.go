@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strconv"
@@ -120,66 +121,147 @@ func (driver *TofinoDriver) Connect(ctx context.Context, endpoint string, p4name
 	return nil
 }
 
-func (driver *TofinoDriver) getEntityBySingleKey(tblName, keyName string, keyValue []byte) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, keyName string, keyValue uint32, dataNames []string, dataSize int) (*bfruntime.Entity, error) {
+	tblName := driver.FindTableNameByShortName(shortTblName)
+
+	if tblName == "" {
+		driver.logger.Error("cannot find table for the probe", "tblName", tblName)
+		return nil, &ErrNameNotFound{Msg: "Cannot find table name", Entity: tblName}
+	}
+
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return nil, errors.New(fmt.Sprintf("Cannot find table id of %s", tblName))
+		return nil, &ErrNameNotFound{Msg: "Cannot find table name", Entity: tblName}
 	}
 
 	keyId := driver.GetKeyIdByName(tblName, keyName)
 	if keyId == 0 {
-		return nil, errors.New(fmt.Sprintf("Cannot find key id of %s", keyName))
+		return nil, &ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
 	}
+	// Convert to byte slice
+	byteEntryId := make([]byte, 4)
+	binary.BigEndian.PutUint32(byteEntryId, keyValue)
 
 	keyFields := []*bfruntime.KeyField{
 		{
 			FieldId: keyId,
 			MatchType: &bfruntime.KeyField_Exact_{
 				Exact: &bfruntime.KeyField_Exact{
-					Value: keyValue,
+					Value: byteEntryId,
 				},
 			},
 		},
 	}
-	tblEntries := []*bfruntime.Entity{}
 
-	tblEntries = append(tblEntries,
-		&bfruntime.Entity{
-			Entity: &bfruntime.Entity_TableEntry{
-				TableEntry: &bfruntime.TableEntry{
-					TableId: tblId,
-					Value: &bfruntime.TableEntry_Key{
-						Key: &bfruntime.TableKey{
-							Fields: keyFields,
-						},
+	var dataFields []*bfruntime.DataField
+	for _, dataName := range dataNames {
+		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
+		if dataId == 0 {
+			return nil, &ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
+		}
+		dataField := &bfruntime.DataField{
+			FieldId: dataId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: make([]byte, dataSize),
+			},
+		}
+		dataFields = append(dataFields, dataField)
+	}
+	/*tblOperation := &bfruntime.TableOperation{
+		TableId:             tblId,
+		TableOperationsType: "Sync",
+	}*/
+
+	tblEntry := &bfruntime.Entity{
+		Entity: &bfruntime.Entity_TableEntry{
+			TableEntry: &bfruntime.TableEntry{
+				TableId: tblId,
+				Value: &bfruntime.TableEntry_Key{
+					Key: &bfruntime.TableKey{
+						Fields: keyFields,
 					},
+				},
+				Data: &bfruntime.TableData{
+					Fields: dataFields,
 				},
 			},
 		},
-	)
+	}
 
-	readReq := &bfruntime.ReadRequest{
-		ClientId: driver.clientId,
-		Entities: tblEntries,
+	return tblEntry, nil
+}
+
+func (driver *TofinoDriver) ResetTables(sessionIds []uint32) error {
+	allResetReq := make([]*bfruntime.Update, 0)
+	uint32ByteSize := 4
+	uint64ByteSize := 8
+	for _, id := range sessionIds {
+		// PROBE_INGRESS_START_HDR_SIZE
+		resetReq, err := driver.getIndirectCounterResetRequest(PROBE_INGRESS_START_HDR_SIZE, REGISTER_INDEX_KEY_NAME, id, []string{PROBE_INGRESS_START_HDR_SIZE}, uint32ByteSize)
+		if err != nil {
+			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_INGRESS_START_HDR_SIZE, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+		// PROBE_INGRESS_END_HDR_SIZE
+		resetReq, err = driver.getIndirectCounterResetRequest(PROBE_INGRESS_END_HDR_SIZE, REGISTER_INDEX_KEY_NAME, id, []string{PROBE_INGRESS_END_HDR_SIZE}, uint32ByteSize)
+		if err != nil {
+			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_INGRESS_END_HDR_SIZE, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+		// PROBE_EGRESS_START_CNT
+		resetReq, err = driver.getIndirectCounterResetRequest(PROBE_EGRESS_START_CNT, COUNTER_INDEX_KEY_NAME, id, []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}, uint64ByteSize)
+		if err != nil {
+			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_EGRESS_START_CNT, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+		// PROBE_EGRESS_END_CNT
+		resetReq, err = driver.getIndirectCounterResetRequest(PROBE_EGRESS_END_CNT, REGISTER_INDEX_KEY_NAME, id, []string{PROBE_EGRESS_END_CNT}, uint32ByteSize)
+		if err != nil {
+			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_EGRESS_END_CNT, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+	}
+
+	writeReq := bfruntime.WriteRequest{
+		ClientId:  driver.clientId,
+		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,
 		Target: &bfruntime.TargetDevice{
 			DeviceId:  0,
 			PipeId:    0xffff,
 			PrsrId:    255,
 			Direction: 255,
 		},
-	}
-	// Send read request
-	readClient, err := driver.client.Read(driver.ctx, readReq)
-	if err != nil {
-		return nil, err
-	}
-	// Read response
-	resp, err := readClient.Recv()
-	if err != nil {
-		return nil, err
+		Updates: allResetReq,
 	}
 
-	return resp.Entities, nil
+	_, err := driver.client.Write(driver.ctx, &writeReq)
+	if err != nil {
+		driver.logger.Error("Resetting counters on device failed.", "error", err)
+		return err
+	}
+	driver.logger.Debug("Counter have been reset.")
+
+	return nil
 }
 
 // Low Level read request handler
@@ -211,6 +293,26 @@ func (driver *TofinoDriver) SendReadRequest(tblEntries []*bfruntime.Entity) ([]*
 	return resp.GetEntities(), nil
 }
 
+func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) error {
+	writeReq := bfruntime.WriteRequest{
+		ClientId:  driver.clientId,
+		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,
+		Target: &bfruntime.TargetDevice{
+			DeviceId:  0,
+			PipeId:    0xffff,
+			PrsrId:    255,
+			Direction: 255,
+		},
+		Updates: updateItems,
+	}
+
+	_, err := driver.client.Write(driver.ctx, &writeReq)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Enable Sync operation on register
 func (driver *TofinoDriver) EnableSyncOperationOnRegister(tblName string) error {
 	tblId := driver.GetTableIdByName(tblName)
@@ -234,19 +336,7 @@ func (driver *TofinoDriver) EnableSyncOperationOnRegister(tblName string) error 
 		},
 	}
 
-	writeReq := bfruntime.WriteRequest{
-		ClientId:  driver.clientId,
-		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,
-		Target: &bfruntime.TargetDevice{
-			DeviceId:  0,
-			PipeId:    0xffff,
-			PrsrId:    255,
-			Direction: 255,
-		},
-		Updates: updateItems,
-	}
-
-	_, err := driver.client.Write(driver.ctx, &writeReq)
+	err := driver.SendWriteRequest(updateItems)
 	if err != nil {
 		driver.logger.Error("Enable sync operation on register failed.", "register", tblName, "err", err)
 		return err

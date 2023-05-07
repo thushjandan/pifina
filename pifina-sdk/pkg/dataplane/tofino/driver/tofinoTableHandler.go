@@ -33,9 +33,11 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 		return nil, &ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
-	// Transform response
 	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	updateRequests := make([]*bfruntime.Update, 0, len(entities))
+	// Transform response
 	for i := range entities {
+		isCounterEntry := false
 		dataEntries := entities[i].GetTableEntry().GetData().GetFields()
 		// Skip default entry
 		if len(dataEntries) < 3 {
@@ -58,6 +60,11 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 					Type:       METRIC_BYTES,
 					MetricName: PROBE_INGRESS_MATCH_CNT,
 				})
+				// Prepare the reset counter request
+				isCounterEntry = true
+				dataEntries[data_i].Value = &bfruntime.DataField_Stream{
+					Stream: make([]byte, 8),
+				}
 			}
 			// If the key indicates a packet counter
 			if dataEntries[data_i].GetFieldId() == counterPktsKeyId {
@@ -67,7 +74,30 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 					Type:       METRIC_PKTS,
 					MetricName: PROBE_INGRESS_MATCH_CNT,
 				})
+				// Prepare the reset counter request
+				isCounterEntry = true
+				dataEntries[data_i].Value = &bfruntime.DataField_Stream{
+					Stream: make([]byte, 8),
+				}
 			}
+		}
+		// If the entry contains any
+		if isCounterEntry {
+			updateRequests = append(updateRequests, &bfruntime.Update{
+				Type: bfruntime.Update_MODIFY,
+				Entity: &bfruntime.Entity{
+					Entity: &bfruntime.Entity_TableEntry{
+						TableEntry: entities[i].GetTableEntry(),
+					},
+				},
+			})
+		}
+	}
+
+	if len(updateRequests) > 0 {
+		err := driver.SendWriteRequest(updateRequests)
+		if err != nil {
+			driver.logger.Error("Error occured during table counter reset.", "err", err)
 		}
 	}
 
@@ -94,12 +124,69 @@ func (driver *TofinoDriver) GetMatchSelectorEntries() ([]*bfruntime.Entity, erro
 				TableEntry: &bfruntime.TableEntry{
 					IsDefaultEntry: false,
 					TableId:        tblId,
+					TableFlags: &bfruntime.TableFlags{
+						FromHw: true,
+					},
 				},
 			},
 		},
 	)
 	entities, err := driver.SendReadRequest(tblEntries)
 	return entities, err
+}
+
+func (driver *TofinoDriver) ResetTableDirectCounter() error {
+	dataNames := []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}
+	dataSize := 8
+
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	var dataFields []*bfruntime.DataField
+	for _, dataName := range dataNames {
+		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
+		if dataId == 0 {
+			return &ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
+		}
+		dataField := &bfruntime.DataField{
+			FieldId: dataId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: make([]byte, dataSize),
+			},
+		}
+		dataFields = append(dataFields, dataField)
+	}
+
+	tblEntries := []*bfruntime.Update{}
+
+	tblEntries = append(tblEntries,
+		&bfruntime.Update{
+			Entity: &bfruntime.Entity{
+				Entity: &bfruntime.Entity_TableEntry{
+					TableEntry: &bfruntime.TableEntry{
+						IsDefaultEntry: false,
+						TableId:        tblId,
+						Data: &bfruntime.TableData{
+							Fields: dataFields,
+						},
+					},
+				},
+			},
+		},
+	)
+
+	err := driver.SendWriteRequest(tblEntries)
+	if err != nil {
+		driver.logger.Error("Error occured during table counter reset.", "err", err)
+	}
+	return nil
 }
 
 // Retrieve a list of configured session Id from device

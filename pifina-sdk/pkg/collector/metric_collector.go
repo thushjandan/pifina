@@ -81,7 +81,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
 			} else {
-				collector.logger.Debug("Collection of Ingress Start Match table counter has succeeded.")
+				collector.logger.Trace("Collection of Ingress Start Match table counter has succeeded.")
 				for i := range metrics {
 					metricSink <- metrics[i]
 				}
@@ -106,7 +106,7 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header start size counter", "err", err)
 			} else {
-				collector.logger.Debug("Collection of Ingress header start size counter has succeeded.")
+				collector.logger.Trace("Collection of Ingress header start size counter has succeeded.")
 				for i := range metrics {
 					metricSink <- metrics[i]
 				}
@@ -130,7 +130,7 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header end size counter", "err", err)
 			} else {
-				collector.logger.Debug("Collection of Ingress header end size counter has succeeded.")
+				collector.logger.Trace("Collection of Ingress header end size counter has succeeded.")
 				for i := range metrics {
 					metricSink <- metrics[i]
 				}
@@ -155,7 +155,7 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
 			} else {
-				collector.logger.Debug("Collection of Egress start counter has succeeded.")
+				collector.logger.Trace("Collection of Egress start counter has succeeded.")
 				for i := range metrics {
 					metricSink <- metrics[i]
 				}
@@ -181,7 +181,7 @@ func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, w
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress End counter", "err", err)
 			} else {
-				collector.logger.Debug("Collection of Egress end counter has succeeded.")
+				collector.logger.Trace("Collection of Egress end counter has succeeded.")
 				for i := range metrics {
 					metricSink <- metrics[i]
 				}

@@ -8,14 +8,24 @@ import (
 
 // Retrieve egress start packet counter by a list of sessionIds, which are used as index
 func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*MetricItem, error) {
+	driver.logger.Debug("Requesting Egress start byte counter", "sessionIds", sessionIds)
+	metrics, err := driver.GetMetricFromCounter(sessionIds, PROBE_EGRESS_START_CNT)
+	if err == nil {
+		//driver.ResetCounter(sessionIds, PROBE_EGRESS_START_CNT)
+	}
+
+	return metrics, err
+}
+
+func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblName string) ([]*MetricItem, error) {
 	if len(sessionIds) == 0 {
 		driver.logger.Debug("Given list of session ids is empty. Skipping collecting egress start counter.")
 		return nil, nil
 	}
 
-	tblName, ok := driver.probeTableMap[PROBE_EGRESS_START_CNT]
+	tblName, ok := driver.probeTableMap[shortTblName]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_EGRESS_START_CNT}
+		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
@@ -41,6 +51,9 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 					TableEntry: &bfruntime.TableEntry{
 						TableId:        tblId,
 						IsDefaultEntry: false,
+						TableFlags: &bfruntime.TableFlags{
+							FromHw: true,
+						},
 						Value: &bfruntime.TableEntry_Key{
 							Key: &bfruntime.TableKey{
 								Fields: []*bfruntime.KeyField{
@@ -70,9 +83,6 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 	// Get key Ids
 	counterBytesKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_BYTES)
 	counterPktsKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_PKTS)
-	if counterBytesKeyId == 0 || counterPktsKeyId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find key id for counter data type", Entity: COUNTER_SPEC_BYTES}
-	}
 
 	// Transform response
 	transformedMetrics := make([]*MetricItem, 0, len(entities))
@@ -102,4 +112,30 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 	}
 
 	return transformedMetrics, nil
+}
+
+// Reset indirect counters on device given a list of sessionIds
+func (driver *TofinoDriver) ResetCounter(sessionIds []uint32, shortTbleName string) {
+	registerValueByteSize := 8
+	allResetReq := make([]*bfruntime.Update, 0)
+	// Build reset request
+	for _, id := range sessionIds {
+		resetReq, err := driver.getIndirectCounterResetRequest(shortTbleName, COUNTER_INDEX_KEY_NAME, id, []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}, registerValueByteSize)
+		if err != nil {
+			driver.logger.Error("cannot build bfrt reset request", "tblName", shortTbleName, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+	}
+	if len(allResetReq) > 0 {
+		// Send reset requests
+		err := driver.SendWriteRequest(allResetReq)
+		if err != nil {
+			driver.logger.Error("Register reset has failed", "tblName", shortTbleName, "err", err)
+		}
+	}
 }

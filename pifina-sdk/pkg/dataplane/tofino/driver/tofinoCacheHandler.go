@@ -149,3 +149,18 @@ func (driver *TofinoDriver) GetSingletonDataIdByName(tblName, dataName string) u
 	}
 	return dataId
 }
+
+func (driver *TofinoDriver) GetSingletonDataIdLikeName(tblName, shortDataName string) uint32 {
+	dataId := uint32(0)
+	// Find table name in index
+	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		for dataIdx := range driver.P4Tables[sliceIdx].Data {
+			dataObj := driver.P4Tables[sliceIdx].Data[dataIdx]
+			if strings.Contains(dataObj.Singleton.Name, shortDataName) {
+				return dataObj.Singleton.Id
+			}
+		}
+	}
+	return dataId
+}
