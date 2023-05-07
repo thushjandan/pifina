@@ -2,6 +2,7 @@ package driver
 
 import (
 	"encoding/binary"
+	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 )
@@ -86,6 +87,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 
 	// Transform response
 	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	timeNow := time.Now()
 	for i := range entities {
 		sessionId := binary.BigEndian.Uint32(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
 		dataEntries := entities[i].GetTableEntry().GetData().GetFields()
@@ -93,19 +95,21 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 			// If the key indicates a byte counter
 			if dataEntries[data_i].FieldId == counterBytesKeyId {
 				transformedMetrics = append(transformedMetrics, &MetricItem{
-					SessionId:  sessionId,
-					Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:       METRIC_BYTES,
-					MetricName: PROBE_EGRESS_START_CNT,
+					SessionId:   sessionId,
+					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:        METRIC_BYTES,
+					MetricName:  PROBE_EGRESS_START_CNT,
+					LastUpdated: timeNow,
 				})
 			}
 			// If the key indicates a packet counter
 			if dataEntries[data_i].FieldId == counterPktsKeyId {
 				transformedMetrics = append(transformedMetrics, &MetricItem{
-					SessionId:  sessionId,
-					Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:       METRIC_PKTS,
-					MetricName: PROBE_EGRESS_START_CNT,
+					SessionId:   sessionId,
+					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:        METRIC_PKTS,
+					MetricName:  PROBE_EGRESS_START_CNT,
+					LastUpdated: timeNow,
 				})
 			}
 		}

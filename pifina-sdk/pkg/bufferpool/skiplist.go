@@ -49,6 +49,7 @@ func (sl *SkipList) Set(key string, subKey uint32, value *driver.MetricItem) {
 		} else {
 			currentNode.value.Value += value.Value
 		}
+		currentNode.value.LastUpdated = value.LastUpdated
 		return
 	}
 
@@ -95,6 +96,7 @@ func (sl *SkipList) GetAllAndReset() []*driver.MetricItem {
 	nextNode := sl.root.next[0]
 
 	allItems := make([]*driver.MetricItem, 0, sl.length)
+	timeNow := time.Now()
 
 	for nextNode != nil {
 		// Copy metric struct
@@ -103,6 +105,8 @@ func (sl *SkipList) GetAllAndReset() []*driver.MetricItem {
 		if nextNode.value.Type != driver.METRIC_EXT_VALUE {
 			nextNode.value.Value = 0
 		}
+		// Sampling time
+		newItem.LastUpdated = timeNow
 		allItems = append(allItems, &newItem)
 		nextNode = nextNode.next[0]
 	}

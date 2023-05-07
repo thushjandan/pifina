@@ -56,7 +56,7 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	wg.Add(3)
 	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
 	go controller.StartBufferpoolManager(ctx, wg, metricDataChannel)
-	go controller.StartSampleMetrics(ctx, wg)
+	go controller.StartSampleMetrics(ctx, wg, metricsSinkChannel)
 	// Block until a kill signal
 	<-ctx.Done()
 	// Close all channels

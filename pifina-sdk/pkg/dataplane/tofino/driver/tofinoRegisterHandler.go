@@ -2,6 +2,7 @@ package driver
 
 import (
 	"encoding/binary"
+	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 )
@@ -117,6 +118,7 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 
 	// Transform response
 	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	timeNow := time.Now()
 	for i := range entities {
 		// Get sessionId from key field.
 		sessionId := binary.BigEndian.Uint32(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
@@ -128,10 +130,11 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 				continue
 			}
 			transformedMetrics = append(transformedMetrics, &MetricItem{
-				SessionId:  sessionId,
-				Value:      uint64(decodedValue),
-				Type:       metricType,
-				MetricName: shortTblName,
+				SessionId:   sessionId,
+				Value:       uint64(decodedValue),
+				Type:        metricType,
+				MetricName:  shortTblName,
+				LastUpdated: timeNow,
 			})
 		}
 	}

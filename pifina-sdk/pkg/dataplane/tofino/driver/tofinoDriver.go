@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
@@ -28,10 +29,11 @@ type TofinoDriver struct {
 }
 
 type MetricItem struct {
-	SessionId  uint32
-	Type       string
-	Value      uint64
-	MetricName string
+	SessionId   uint32
+	Type        string
+	Value       uint64
+	MetricName  string
+	LastUpdated time.Time
 }
 
 type ErrNameNotFound struct {

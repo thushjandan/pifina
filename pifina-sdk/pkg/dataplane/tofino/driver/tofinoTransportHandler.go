@@ -159,6 +159,7 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 		if dataId == 0 {
 			return nil, &ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
 		}
+		// Set the counter value to 0. The byte array needs to have the same length as on the dataplane
 		dataField := &bfruntime.DataField{
 			FieldId: dataId,
 			Value: &bfruntime.DataField_Stream{
@@ -167,10 +168,6 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 		}
 		dataFields = append(dataFields, dataField)
 	}
-	/*tblOperation := &bfruntime.TableOperation{
-		TableId:             tblId,
-		TableOperationsType: "Sync",
-	}*/
 
 	tblEntry := &bfruntime.Entity{
 		Entity: &bfruntime.Entity_TableEntry{
@@ -189,79 +186,6 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 	}
 
 	return tblEntry, nil
-}
-
-func (driver *TofinoDriver) ResetTables(sessionIds []uint32) error {
-	allResetReq := make([]*bfruntime.Update, 0)
-	uint32ByteSize := 4
-	uint64ByteSize := 8
-	for _, id := range sessionIds {
-		// PROBE_INGRESS_START_HDR_SIZE
-		resetReq, err := driver.getIndirectCounterResetRequest(PROBE_INGRESS_START_HDR_SIZE, REGISTER_INDEX_KEY_NAME, id, []string{PROBE_INGRESS_START_HDR_SIZE}, uint32ByteSize)
-		if err != nil {
-			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_INGRESS_START_HDR_SIZE, "err", err)
-			continue
-		} else {
-			allResetReq = append(allResetReq, &bfruntime.Update{
-				Type:   bfruntime.Update_MODIFY,
-				Entity: resetReq,
-			})
-		}
-		// PROBE_INGRESS_END_HDR_SIZE
-		resetReq, err = driver.getIndirectCounterResetRequest(PROBE_INGRESS_END_HDR_SIZE, REGISTER_INDEX_KEY_NAME, id, []string{PROBE_INGRESS_END_HDR_SIZE}, uint32ByteSize)
-		if err != nil {
-			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_INGRESS_END_HDR_SIZE, "err", err)
-			continue
-		} else {
-			allResetReq = append(allResetReq, &bfruntime.Update{
-				Type:   bfruntime.Update_MODIFY,
-				Entity: resetReq,
-			})
-		}
-		// PROBE_EGRESS_START_CNT
-		resetReq, err = driver.getIndirectCounterResetRequest(PROBE_EGRESS_START_CNT, COUNTER_INDEX_KEY_NAME, id, []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}, uint64ByteSize)
-		if err != nil {
-			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_EGRESS_START_CNT, "err", err)
-			continue
-		} else {
-			allResetReq = append(allResetReq, &bfruntime.Update{
-				Type:   bfruntime.Update_MODIFY,
-				Entity: resetReq,
-			})
-		}
-		// PROBE_EGRESS_END_CNT
-		resetReq, err = driver.getIndirectCounterResetRequest(PROBE_EGRESS_END_CNT, REGISTER_INDEX_KEY_NAME, id, []string{PROBE_EGRESS_END_CNT}, uint32ByteSize)
-		if err != nil {
-			driver.logger.Error("cannot reset bfrt request", "tblName", PROBE_EGRESS_END_CNT, "err", err)
-			continue
-		} else {
-			allResetReq = append(allResetReq, &bfruntime.Update{
-				Type:   bfruntime.Update_MODIFY,
-				Entity: resetReq,
-			})
-		}
-	}
-
-	writeReq := bfruntime.WriteRequest{
-		ClientId:  driver.clientId,
-		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,
-		Target: &bfruntime.TargetDevice{
-			DeviceId:  0,
-			PipeId:    0xffff,
-			PrsrId:    255,
-			Direction: 255,
-		},
-		Updates: allResetReq,
-	}
-
-	_, err := driver.client.Write(driver.ctx, &writeReq)
-	if err != nil {
-		driver.logger.Error("Resetting counters on device failed.", "error", err)
-		return err
-	}
-	driver.logger.Debug("Counter have been reset.")
-
-	return nil
 }
 
 // Low Level read request handler

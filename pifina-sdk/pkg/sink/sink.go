@@ -59,7 +59,7 @@ func (s *Sink) Emit(metrics []*driver.MetricItem) error {
 	}
 
 	// Convert to byte string
-	s.logger.Debug("Marshalling metrics to protobuf")
+	s.logger.Trace("Marshalling metrics to protobuf")
 	data, err := proto.Marshal(telemetryPayload)
 	if err != nil {
 		return err

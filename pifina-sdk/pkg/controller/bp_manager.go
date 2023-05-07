@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sync"
 	"time"
@@ -54,7 +53,7 @@ func (ctrl *TofinoController) addMetricToStorage(ctx context.Context, newMetricL
 	}
 }
 
-func (ctrl *TofinoController) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup) {
+func (ctrl *TofinoController) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup, c chan []*driver.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(2 * time.Second)
@@ -64,9 +63,8 @@ func (ctrl *TofinoController) StartSampleMetrics(ctx context.Context, wg *sync.W
 		select {
 		case <-ticker.C:
 			allItems := ctrl.metricStorage.GetAllAndReset()
-			for i := range allItems {
-				fmt.Printf("%+v\n", allItems[i])
-			}
+			ctrl.logger.Debug("Sampled metrics", "metrics", allItems)
+			c <- allItems
 		case <-ctx.Done():
 			ctrl.logger.Info("Stopping metric sampler...")
 			return

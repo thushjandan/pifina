@@ -3,6 +3,7 @@ package driver
 import (
 	"encoding/binary"
 	"sort"
+	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 )
@@ -35,6 +36,7 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 
 	transformedMetrics := make([]*MetricItem, 0, len(entities))
 	updateRequests := make([]*bfruntime.Update, 0, len(entities))
+	timeNow := time.Now()
 	// Transform response
 	for i := range entities {
 		isCounterEntry := false
@@ -55,10 +57,11 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 			// If the key indicates a byte counter
 			if dataEntries[data_i].GetFieldId() == counterBytesKeyId {
 				transformedMetrics = append(transformedMetrics, &MetricItem{
-					SessionId:  sessionId,
-					Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:       METRIC_BYTES,
-					MetricName: PROBE_INGRESS_MATCH_CNT,
+					SessionId:   sessionId,
+					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:        METRIC_BYTES,
+					MetricName:  PROBE_INGRESS_MATCH_CNT,
+					LastUpdated: timeNow,
 				})
 				// Prepare the reset counter request
 				isCounterEntry = true
@@ -69,10 +72,11 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 			// If the key indicates a packet counter
 			if dataEntries[data_i].GetFieldId() == counterPktsKeyId {
 				transformedMetrics = append(transformedMetrics, &MetricItem{
-					SessionId:  sessionId,
-					Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:       METRIC_PKTS,
-					MetricName: PROBE_INGRESS_MATCH_CNT,
+					SessionId:   sessionId,
+					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+					Type:        METRIC_PKTS,
+					MetricName:  PROBE_INGRESS_MATCH_CNT,
+					LastUpdated: timeNow,
 				})
 				// Prepare the reset counter request
 				isCounterEntry = true
