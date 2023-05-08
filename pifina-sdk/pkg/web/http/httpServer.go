@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -59,8 +60,13 @@ func (s *PifinaHttpServer) ListenAndPublishMetrics(ctx context.Context, metricCh
 		select {
 		case metricList := <-metricChannel:
 			s.logger.Trace("Got metrics", "metrics", metricList)
+			jsonPayload, err := json.Marshal(metricList)
+			if err != nil {
+				continue
+			}
+
 			s.sse.Publish("metrics", &sse.Event{
-				Data: []byte("ping"),
+				Data: jsonPayload,
 			})
 		case <-ctx.Done():
 			s.logger.Info("Stopping sse server.")
