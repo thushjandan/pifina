@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
 type MetricCollector struct {
@@ -39,7 +40,7 @@ func (collector *MetricCollector) GetSessionIdCache() []uint32 {
 	return collector.sessionIdCache
 }
 
-func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
+func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	// If sessionId cache is empty, then refresh the cache
 	if collector.sessionIdCache == nil {
 		err := collector.LoadSessionsFromDevice()
@@ -65,7 +66,7 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	go collector.CollectEgressEndCounter(ctx, wg, metricSink)
 }
 
-func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
+func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	// Mark the context as done after exiting the routine.
 	defer wg.Done()
 
@@ -94,7 +95,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 	}
 }
 
-func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
+func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(collector.sampleInterval)
@@ -118,7 +119,7 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 	}
 }
 
-func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
+func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(collector.sampleInterval)
@@ -142,7 +143,7 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 	}
 }
 
-func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
+func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(collector.sampleInterval)
@@ -168,7 +169,7 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 
 }
 
-func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *driver.MetricItem) {
+func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(collector.sampleInterval)

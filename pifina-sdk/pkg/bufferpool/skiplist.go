@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
 type SkipList struct {
@@ -33,7 +34,7 @@ func (sl *SkipList) getCompositeKey(key string, subKey uint32) string {
 // Inserts a new item in the skiplist
 // If the key exists, it ignores the request
 // Locking is optimistic and happens only after searching.
-func (sl *SkipList) Set(key string, subKey uint32, value *driver.MetricItem) {
+func (sl *SkipList) Set(key string, subKey uint32, value *model.MetricItem) {
 	compositeKey := sl.getCompositeKey(key, subKey)
 
 	sl.mutex.Lock()
@@ -92,10 +93,10 @@ func (sl *SkipList) Get(key string, subKey uint32) *SkipListNode {
 	return nil
 }
 
-func (sl *SkipList) GetAllAndReset() []*driver.MetricItem {
+func (sl *SkipList) GetAllAndReset() []*model.MetricItem {
 	nextNode := sl.root.next[0]
 
-	allItems := make([]*driver.MetricItem, 0, sl.length)
+	allItems := make([]*model.MetricItem, 0, sl.length)
 	timeNow := time.Now()
 
 	for nextNode != nil {

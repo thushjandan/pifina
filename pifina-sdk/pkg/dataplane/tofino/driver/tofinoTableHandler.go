@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
-func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting ingress start match selector counter")
 	entities, err := driver.GetMatchSelectorEntries()
 	if err != nil {
@@ -34,7 +35,7 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 		return nil, &ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
-	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
 	updateRequests := make([]*bfruntime.Update, 0, len(entities))
 	timeNow := time.Now()
 	// Transform response
@@ -56,7 +57,7 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 			}
 			// If the key indicates a byte counter
 			if dataEntries[data_i].GetFieldId() == counterBytesKeyId {
-				transformedMetrics = append(transformedMetrics, &MetricItem{
+				transformedMetrics = append(transformedMetrics, &model.MetricItem{
 					SessionId:   sessionId,
 					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
 					Type:        METRIC_BYTES,
@@ -71,7 +72,7 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*MetricItem
 			}
 			// If the key indicates a packet counter
 			if dataEntries[data_i].GetFieldId() == counterPktsKeyId {
-				transformedMetrics = append(transformedMetrics, &MetricItem{
+				transformedMetrics = append(transformedMetrics, &model.MetricItem{
 					SessionId:   sessionId,
 					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
 					Type:        METRIC_PKTS,

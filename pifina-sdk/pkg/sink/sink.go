@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
 )
 
@@ -32,7 +32,7 @@ func NewSink(logger hclog.Logger, pifinaEndpoint string) *Sink {
 	}
 }
 
-func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*driver.MetricItem) error {
+func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*model.MetricItem) error {
 	defer wg.Done()
 
 	for {
@@ -51,7 +51,7 @@ func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*driv
 }
 
 // Transforms the payload to protobuf and sends to pifina server
-func (s *Sink) Emit(metrics []*driver.MetricItem) error {
+func (s *Sink) Emit(metrics []*model.MetricItem) error {
 	protobufMetrics := ConvertMetricsToProtobuf(metrics)
 	telemetryPayload := &pifina.PifinaTelemetryMessage{
 		SourceHost: s.mySystemName,

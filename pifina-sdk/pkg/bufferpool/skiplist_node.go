@@ -1,6 +1,6 @@
 package bufferpool
 
-import "github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+import "github.com/thushjandan/pifina/pkg/model"
 
 type nodeHeader struct {
 	next []*SkipListNode
@@ -9,14 +9,14 @@ type nodeHeader struct {
 type SkipListNode struct {
 	nodeHeader
 	key   string
-	value *driver.MetricItem
+	value *model.MetricItem
 }
 
 func (node *SkipListNode) Key() string {
 	return node.key
 }
 
-func (node *SkipListNode) Value() *driver.MetricItem {
+func (node *SkipListNode) Value() *model.MetricItem {
 	return node.value
 }
 

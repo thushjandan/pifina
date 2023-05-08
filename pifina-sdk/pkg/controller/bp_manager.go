@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/pkg/bufferpool"
-	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
-func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sync.WaitGroup, c chan *driver.MetricItem) {
+func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sync.WaitGroup, c chan *model.MetricItem) {
 	defer wg.Done()
 	sessionIdWidth, err := ctrl.driver.GetSessionIdBitWidth()
 	notReady := false
@@ -21,7 +21,11 @@ func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sy
 	}
 
 	// Amount of static probes * variable length of sessionId = upper bound
-	upperBound := len(ctrl.collector.GetSessionIdCache()) * int(math.Pow(2, float64(sessionIdWidth)))
+	upperBound := int(math.Pow(2, float64(sessionIdWidth)))
+	if len(ctrl.collector.GetSessionIdCache()) > 0 {
+		upperBound = upperBound * len(ctrl.collector.GetSessionIdCache())
+	}
+
 	ctrl.logger.Debug("Creating bufferpool", "upperBound", upperBound)
 	ctrl.metricStorage, err = bufferpool.NewSkiplistWithMaxBound(upperBound)
 	if err != nil {
@@ -45,7 +49,7 @@ func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sy
 	}
 }
 
-func (ctrl *TofinoController) addMetricToStorage(ctx context.Context, newMetricList *driver.MetricItem) {
+func (ctrl *TofinoController) addMetricToStorage(ctx context.Context, newMetricList *model.MetricItem) {
 	if ctrl.driver.IsInProbeTable(newMetricList.MetricName) {
 		ctrl.metricStorage.Set(newMetricList.MetricName, newMetricList.SessionId, newMetricList)
 	} else {
@@ -53,7 +57,7 @@ func (ctrl *TofinoController) addMetricToStorage(ctx context.Context, newMetricL
 	}
 }
 
-func (ctrl *TofinoController) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup, c chan []*driver.MetricItem) {
+func (ctrl *TofinoController) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup, c chan []*model.MetricItem) {
 	defer wg.Done()
 
 	ticker := time.NewTicker(2 * time.Second)

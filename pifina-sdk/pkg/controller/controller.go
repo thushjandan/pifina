@@ -8,6 +8,7 @@ import (
 	"github.com/thushjandan/pifina/pkg/bufferpool"
 	"github.com/thushjandan/pifina/pkg/collector"
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/sink"
 )
 
@@ -50,9 +51,9 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	}
 
 	controller.EnableSyncOperationOnTables()
-	metricDataChannel := make(chan *driver.MetricItem, 10)
+	metricDataChannel := make(chan *model.MetricItem, 10)
 	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
-	metricsSinkChannel := make(chan []*driver.MetricItem)
+	metricsSinkChannel := make(chan []*model.MetricItem)
 	wg.Add(3)
 	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
 	go controller.StartBufferpoolManager(ctx, wg, metricDataChannel)

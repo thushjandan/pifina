@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
 // Retrieve Ingress End header byte counter by a list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Ingress start header byte counter", "sessionIds", sessionIds)
 	// Retrieve register values for selected sessionId
 	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE, METRIC_HDR_BYTES)
@@ -24,7 +25,7 @@ func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*M
 
 // Retrieve Ingress End header byte counter by a list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Ingress end header byte counter", "sessionIds", sessionIds)
 	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE, METRIC_HDR_BYTES)
 	// If no errors have occured, reset the register
@@ -38,7 +39,7 @@ func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*Met
 
 // Retrieve Egress End packet byte counter by a list of sessionIds.
 // Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Egress end byte counter", "sessionIds", sessionIds)
 	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_EGRESS_END_CNT, METRIC_BYTES)
 	// If no errors have occured, reset the register
@@ -51,7 +52,7 @@ func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*MetricI
 }
 
 // Retrieves register values by a list of sessionIds, which are used as index.
-func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblName string, metricType string) ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblName string, metricType string) ([]*model.MetricItem, error) {
 	// If an empty list is given, then there is no need to request the dataplane for metrics.
 	if len(sessionIds) == 0 {
 		driver.logger.Debug("Given list of session ids is empty. Skipping collecting egress end counter.")
@@ -117,7 +118,7 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 	}
 
 	// Transform response
-	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
 	timeNow := time.Now()
 	for i := range entities {
 		// Get sessionId from key field.
@@ -129,7 +130,7 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 			if decodedValue == 0 {
 				continue
 			}
-			transformedMetrics = append(transformedMetrics, &MetricItem{
+			transformedMetrics = append(transformedMetrics, &model.MetricItem{
 				SessionId:   sessionId,
 				Value:       uint64(decodedValue),
 				Type:        metricType,

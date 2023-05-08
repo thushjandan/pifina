@@ -1,12 +1,12 @@
 package sink
 
 import (
-	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func ConvertMetricsToProtobuf(metrics []*driver.MetricItem) []*pifina.PifinaMetric {
+func ConvertMetricsToProtobuf(metrics []*model.MetricItem) []*pifina.PifinaMetric {
 	// Check precondition
 	if metrics == nil || len(metrics) == 0 {
 		return nil

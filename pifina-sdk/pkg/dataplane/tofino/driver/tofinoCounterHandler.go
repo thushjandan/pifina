@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
 // Retrieve egress start packet counter by a list of sessionIds, which are used as index
-func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Egress start byte counter", "sessionIds", sessionIds)
 	metrics, err := driver.GetMetricFromCounter(sessionIds, PROBE_EGRESS_START_CNT)
 	if err == nil {
@@ -18,7 +19,7 @@ func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*Metri
 	return metrics, err
 }
 
-func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblName string) ([]*MetricItem, error) {
+func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblName string) ([]*model.MetricItem, error) {
 	if len(sessionIds) == 0 {
 		driver.logger.Debug("Given list of session ids is empty. Skipping collecting egress start counter.")
 		return nil, nil
@@ -86,7 +87,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 	counterPktsKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_PKTS)
 
 	// Transform response
-	transformedMetrics := make([]*MetricItem, 0, len(entities))
+	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
 	timeNow := time.Now()
 	for i := range entities {
 		sessionId := binary.BigEndian.Uint32(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
@@ -94,7 +95,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 		for data_i := range dataEntries {
 			// If the key indicates a byte counter
 			if dataEntries[data_i].FieldId == counterBytesKeyId {
-				transformedMetrics = append(transformedMetrics, &MetricItem{
+				transformedMetrics = append(transformedMetrics, &model.MetricItem{
 					SessionId:   sessionId,
 					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
 					Type:        METRIC_BYTES,
@@ -104,7 +105,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 			}
 			// If the key indicates a packet counter
 			if dataEntries[data_i].FieldId == counterPktsKeyId {
-				transformedMetrics = append(transformedMetrics, &MetricItem{
+				transformedMetrics = append(transformedMetrics, &model.MetricItem{
 					SessionId:   sessionId,
 					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
 					Type:        METRIC_PKTS,

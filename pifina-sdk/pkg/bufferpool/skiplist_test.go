@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
 func TestCRUD(t *testing.T) {
@@ -18,7 +19,7 @@ func TestCRUD(t *testing.T) {
 	}
 	keys := []string{"REGISTER1", "REGISTER5", "REGISTER9", "REGISTER3", "REGISTER12", "REGISTER34", "REGISTER7"}
 	for _, key := range keys {
-		sl.Set(key, 0, &driver.MetricItem{Value: 100, MetricName: key, Type: driver.METRIC_BYTES})
+		sl.Set(key, 0, &model.MetricItem{Value: 100, MetricName: key, Type: driver.METRIC_BYTES})
 	}
 
 	for _, key := range keys {
@@ -62,7 +63,7 @@ func TestConcurrentAccess(t *testing.T) {
 			for j := 0; j < 10000; j++ {
 				for _, key := range keys {
 					randomVal := rand.Intn(1000-1) + 1
-					sl.Set(key, 0, &driver.MetricItem{Value: uint64(randomVal), MetricName: key, Type: driver.METRIC_BYTES})
+					sl.Set(key, 0, &model.MetricItem{Value: uint64(randomVal), MetricName: key, Type: driver.METRIC_BYTES})
 				}
 			}
 			wg.Done()
@@ -106,7 +107,7 @@ func BenchmarkRandomSet(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		randomSessionId := rand.Intn(max-1) + 1
-		sl.Set("TABLE", uint32(randomSessionId), &driver.MetricItem{SessionId: uint32(randomSessionId), Value: uint64(randomSessionId)})
+		sl.Set("TABLE", uint32(randomSessionId), &model.MetricItem{SessionId: uint32(randomSessionId), Value: uint64(randomSessionId)})
 	}
 
 	b.SetBytes(int64(b.N))
@@ -121,7 +122,7 @@ func BenchmarkIncSet(b *testing.B) {
 
 	for i := 1; i < b.N; i++ {
 		tmpInt := uint32(i)
-		sl.Set(fmt.Sprintf("TABLE%d", i), 0, &driver.MetricItem{SessionId: tmpInt, Value: uint64(i)})
+		sl.Set(fmt.Sprintf("TABLE%d", i), 0, &model.MetricItem{SessionId: tmpInt, Value: uint64(i)})
 	}
 
 	b.SetBytes(int64(b.N))
