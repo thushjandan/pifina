@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/r3labs/sse/v2"
+	"github.com/thushjandan/pifina/pkg/model"
 )
 
 type PifinaHttpServer struct {
@@ -22,7 +23,7 @@ func NewPifinaHttpServer(logger hclog.Logger) *PifinaHttpServer {
 	}
 }
 
-func (s *PifinaHttpServer) StartWebServer(port string, keyFile string, certFile string) {
+func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyFile string, certFile string, metricChannel chan []*model.MetricItem) {
 	s.sse = sse.New()
 	s.sse.CreateStream("metrics")
 	// Create a new Mux and set the handler
@@ -34,6 +35,9 @@ func (s *PifinaHttpServer) StartWebServer(port string, keyFile string, certFile 
 		Handler: mux,
 	}
 
+	go s.ListenAndPublishMetrics(ctx, metricChannel)
+
+	s.logger.Info("Starting http/2 TLS server")
 	if err := s.server.ListenAndServeTLS(certFile, keyFile); err != http.ErrServerClosed {
 		s.logger.Error("Cannot start http server", "err", err)
 	}
@@ -49,9 +53,18 @@ func (s *PifinaHttpServer) Shutdown() {
 	}
 }
 
-func (s *PifinaHttpServer) PublishMetric() {
-	s.sse.Publish("metrics", &sse.Event{
-		Data: []byte("ping"),
-	})
-
+func (s *PifinaHttpServer) ListenAndPublishMetrics(ctx context.Context, metricChannel chan []*model.MetricItem) {
+	s.logger.Info("Starting http/2 sse server.")
+	for {
+		select {
+		case metricList := <-metricChannel:
+			s.logger.Trace("Got metrics", "metrics", metricList)
+			s.sse.Publish("metrics", &sse.Event{
+				Data: []byte("ping"),
+			})
+		case <-ctx.Done():
+			s.logger.Info("Stopping sse server.")
+			return
+		}
+	}
 }

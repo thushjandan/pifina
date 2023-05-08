@@ -52,7 +52,7 @@ func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*mode
 
 // Transforms the payload to protobuf and sends to pifina server
 func (s *Sink) Emit(metrics []*model.MetricItem) error {
-	protobufMetrics := ConvertMetricsToProtobuf(metrics)
+	protobufMetrics := model.ConvertMetricsToProtobuf(metrics)
 	telemetryPayload := &pifina.PifinaTelemetryMessage{
 		SourceHost: s.mySystemName,
 		Metrics:    protobufMetrics,

@@ -6,6 +6,7 @@ import (
 	"net"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
 	"google.golang.org/protobuf/proto"
 )
@@ -21,7 +22,7 @@ func NewPifinaMetricReceiver(logger hclog.Logger) *MetricReceiver {
 	}
 }
 
-func (r *MetricReceiver) StartServer(ctx context.Context, port string) error {
+func (r *MetricReceiver) StartServer(ctx context.Context, port string, metricChannel chan []*model.MetricItem) error {
 	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		return err
@@ -55,8 +56,11 @@ func (r *MetricReceiver) StartServer(ctx context.Context, port string) error {
 				continue
 			}
 			r.logger.Debug("Successfully decoded protobuf telemetry message", "host", protoTelemetryMsg.SourceHost)
+			metricList := model.ConvertProtobufToMetrics(protoTelemetryMsg.Metrics)
+			if len(metricList) > 0 {
+				metricChannel <- metricList
+			}
 		}
-
 	}()
 
 	return nil
