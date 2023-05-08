@@ -1,7 +1,8 @@
 BFRT_COMPILED_PROTO=internal/dataplane/tofino/protos/bfruntime/bfruntime_grpc.pb.go
 PIFINA_COMPILED_PROTO=pkg/sink/protos/pifina/pifina.pb.go
+SELF_SIGNED_TLS_CERTS=assets/cert.pem
 
-build: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO)
+build: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO) $(SELF_SIGNED_TLS_CERTS)
 	mkdir -p builds
 	go build -o builds/pifina-cp cmd/pifina-cp/main.go
 	go build -o builds/pifina-cli cmd/pifina-cli/main.go
@@ -23,3 +24,8 @@ $(PIFINA_COMPILED_PROTO):
 	--go_out=./pkg/sink/protos/pifina/ \
 	--proto_path=./pkg/sink/protos/ \
 	./pkg/sink/protos/pifina.proto
+
+$(SELF_SIGNED_TLS_CERTS):
+	openssl req -x509 -newkey  ec -pkeyopt ec_paramgen_curve:prime256v1 \
+	-keyout assets/key.pem -out assets/cert.pem -sha256 -days 3650 -nodes \
+	-subj "/C=CH/O=Pifina/CN=PifinaServer"
