@@ -12,13 +12,18 @@
 	const evtSourceMessage = function(event: MessageEvent) {
 		let dataobj: DTOPifinaMetricItem[] = JSON.parse(event.data);
 		dataobj.forEach(item => {
-			metricData[item.metricName] = metricData[item.metricName] || [];
+			// check if key exists. If not, create a new list.
+			if (!(item.metricName in metricData)) {
+				metricData[item.metricName] = [];
+			}
+			// Limit series length
+			if (metricData[item.metricName].length > 500) {
+				metricData[item.metricName].splice(0, metricData[item.metricName].length - 500);
+			}
 			metricData[item.metricName].push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId});
 		})
-		if (metricData[PifinaMetricName.INGRESS_MATCH_CNT].length > 500) {
-			let deleteCount = metricData[PifinaMetricName.INGRESS_MATCH_CNT].length - 500;
-			metricData[PifinaMetricName.INGRESS_MATCH_CNT].splice(0, deleteCount);
-		}
+		// Force rerender
+		metricData = metricData;
 	}
 
 	let evtSource = new EventSource(`https://localhost:8655/api/v1/events?stream=${endpoints[0]}`);
@@ -34,6 +39,14 @@
 		evtSource.onmessage = evtSourceMessage;
 	}
 	let plotOptions: Plot.PlotOptions = { x: { domain: [100, 0] }, grid: true };
+	const xScaleOptions: Plot.ScaleOptions = {
+		label: "Timestamp",
+		tickFormat: (value, _) => (value.toLocaleString(undefined, {
+			hour: 'numeric',
+			minute: 'numeric',
+			second: 'numeric'
+		})),
+	};
 </script>
 
 <div class="grid grid-cols-4">
@@ -52,14 +65,7 @@
 <div bind:clientWidth={cliendScreenWidth} class="mt-8 w-full">
 	<h2>First ingress byte counter</h2>
 	<Chart options={{
-		x: {
-			label: "Timestamp",
-			tickFormat: (value, _) => (value.toLocaleString(undefined, {
-				hour: 'numeric',
-				minute: 'numeric',
-				second: 'numeric'
-			})),
-		},
+		x: xScaleOptions,
 		y: {
 			label: "(bytes/sec)",
 			grid: true
@@ -73,11 +79,25 @@
 	}} />
 </div>
 {/if}
-<div class="mt-8">
+<div bind:clientWidth={cliendScreenWidth} class="mt-8">
 	<h2>Ingress & Egress Packet Counter</h2>
 	<Chart options={plotOptions} />
 </div>
-<div class="mt-8">
+{#if PifinaMetricName.INGRESS_START_HDR in metricData }
+<div bind:clientWidth={cliendScreenWidth} class="mt-8">
 	<h2>Ingress & Egress Packet Header Size</h2>
-	<Chart options={plotOptions} />
+	<Chart options={{
+		x: xScaleOptions,
+		y: {
+			label: "(bytes/sec)",
+			grid: true
+		},
+		width: cliendScreenWidth,
+		color: {legend: true, type: "categorical"},
+		marks: [
+			Plot.line(metricData[PifinaMetricName.INGRESS_START_HDR], {x: "timestamp", y: "value", stroke: "sessionId", marker: "dot"}),
+			Plot.tickY(metricData[PifinaMetricName.INGRESS_START_HDR], {y: "value", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.01, stroke: "white"})
+		]
+	}} />
 </div>
+{/if}

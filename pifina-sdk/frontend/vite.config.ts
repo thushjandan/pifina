@@ -10,10 +10,5 @@ export default defineConfig({
 				secure: false
 			},
 		},
-		fs: {
-			allow: [
-				'..'
-			]
-		}
 	}
 });
