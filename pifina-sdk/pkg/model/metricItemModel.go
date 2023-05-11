@@ -9,3 +9,8 @@ type MetricItem struct {
 	MetricName  string    `json:"metricName"`
 	LastUpdated time.Time `json:"timestamp"`
 }
+
+type TelemetryMessage struct {
+	Source     string
+	MetricList []*MetricItem
+}

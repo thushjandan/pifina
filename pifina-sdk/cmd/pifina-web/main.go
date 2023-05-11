@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/utils"
 	"github.com/thushjandan/pifina/pkg/model"
+	"github.com/thushjandan/pifina/pkg/web/endpoints"
 	"github.com/thushjandan/pifina/pkg/web/http"
 	"github.com/thushjandan/pifina/pkg/web/receiver"
 )
@@ -43,15 +44,17 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
-	metricChannel := make(chan []*model.MetricItem)
+	endpointDirectory := endpoints.NewPifinaEndpointDirectory()
 
-	receiver := receiver.NewPifinaMetricReceiver(logger)
-	err := receiver.StartServer(ctx, *listen_metric_port, metricChannel)
+	telemetryChannel := make(chan *model.TelemetryMessage)
+
+	receiver := receiver.NewPifinaMetricReceiver(logger, endpointDirectory)
+	err := receiver.StartServer(ctx, *listen_metric_port, telemetryChannel)
 	if err != nil {
 		logger.Error("cannot start metric receiver", "err", err)
 	}
-	webServer := http.NewPifinaHttpServer(logger)
-	go webServer.StartWebServer(ctx, *listen_web_port, *keyFile, *certFile, metricChannel)
+	webServer := http.NewPifinaHttpServer(logger, endpointDirectory)
+	go webServer.StartWebServer(ctx, *listen_web_port, *keyFile, *certFile, telemetryChannel)
 
 	<-ctx.Done()
 	receiver.Shutdown()

@@ -8,21 +8,24 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
+	"github.com/thushjandan/pifina/pkg/web/endpoints"
 	"google.golang.org/protobuf/proto"
 )
 
 type MetricReceiver struct {
 	logger hclog.Logger
+	ed     *endpoints.PifinaEndpointDirectory
 	conn   *net.UDPConn
 }
 
-func NewPifinaMetricReceiver(logger hclog.Logger) *MetricReceiver {
+func NewPifinaMetricReceiver(logger hclog.Logger, ed *endpoints.PifinaEndpointDirectory) *MetricReceiver {
 	return &MetricReceiver{
 		logger: logger.Named("metric-receiver"),
+		ed:     ed,
 	}
 }
 
-func (r *MetricReceiver) StartServer(ctx context.Context, port string, metricChannel chan []*model.MetricItem) error {
+func (r *MetricReceiver) StartServer(ctx context.Context, port string, telemetryChannel chan *model.TelemetryMessage) error {
 	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		return err
@@ -55,10 +58,15 @@ func (r *MetricReceiver) StartServer(ctx context.Context, port string, metricCha
 				r.logger.Error("Cannot decode protobuf message from UDP packet", "err", err)
 				continue
 			}
-			r.logger.Debug("Successfully decoded protobuf telemetry message", "host", protoTelemetryMsg.SourceHost)
+			r.logger.Trace("Successfully decoded protobuf telemetry message", "host", protoTelemetryMsg.SourceHost)
 			metricList := model.ConvertProtobufToMetrics(protoTelemetryMsg.Metrics)
+			telemetryMessage := &model.TelemetryMessage{
+				Source:     protoTelemetryMsg.SourceHost,
+				MetricList: metricList,
+			}
 			if len(metricList) > 0 {
-				metricChannel <- metricList
+				r.ed.Set(protoTelemetryMsg.SourceHost)
+				telemetryChannel <- telemetryMessage
 			}
 		}
 	}()
