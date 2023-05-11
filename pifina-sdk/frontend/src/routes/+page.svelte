@@ -1,15 +1,7 @@
 <script>
 
-	import { writable } from 'svelte/store';	
-	
-	const messages = writable([]);
-	const evtSource = new EventSource("https://localhost:8655/events?stream=metrics");
-	evtSource.onmessage = function(event) {
-		console.log(event);
-		var dataobj = JSON.parse(event.data);
-		messages.update(arr => arr.concat(dataobj));
-	}
-	
+	import Dashboard from './Dashboard.svelte';
+    const endpointPromise = fetch('/api/v1/endpoints').then(response => response.json());
 	
 </script>
 
@@ -20,15 +12,14 @@
 </header>
 <main>
     <div class="mx-auto max-w-7xl py-6 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-4">
-            <div>
-                <select placeholder="Placeholder" class="px-3 py-3 placeholder-slate-300 text-slate-600 relative bg-white bg-white rounded text-sm border-0 shadow outline-none focus:outline-none focus:ring w-full">
-                    <option value="volvo">Volvo</option>
-                    <option value="saab">Saab</option>
-                    <option value="mercedes">Mercedes</option>
-                    <option value="audi">Audi</option>
-                </select>
-            </div>
+        <div class="bg-white rounded-lg px-8 py-8 shadow-lg">
+            {#await endpointPromise }
+                <p>Loading endpoints...</p>
+            {:then data }
+                <Dashboard endpoints={data}></Dashboard>
+            {:catch error}
+                <p>Loading endpoints failed! Retry later. {error}</p>                
+            {/await }
         </div>
     </div>
 </main>
