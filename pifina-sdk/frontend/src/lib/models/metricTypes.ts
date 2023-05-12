@@ -5,3 +5,9 @@ export enum PifinaMetricName {
     EGRESS_START_CNT = "PF_EGRESS_START_CNT",
     EGRESS_END_CNT = "PF_EGRESS_END_CNT"
 }
+
+export enum MetricTypes {
+    BYTES = "METRIC_BYTES",
+    PKTS = "METRIC_PKTS",
+    EXT_VALUE = "METRIC_EXT_VALUE"
+}

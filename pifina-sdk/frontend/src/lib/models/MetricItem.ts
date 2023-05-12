@@ -6,6 +6,7 @@ export interface MetricItem {
     sessionId: number
     timestamp: Date
     value: number
+    type: string
 }
 
 export interface DTOPifinaMetricItem {
