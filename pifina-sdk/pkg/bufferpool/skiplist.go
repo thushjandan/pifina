@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
 	"github.com/thushjandan/pifina/pkg/model"
 )
 
@@ -27,15 +26,15 @@ const (
 	DEFAULT_PROBABILITY float64 = 1 / math.E
 )
 
-func (sl *SkipList) getCompositeKey(key string, subKey uint32) string {
-	return fmt.Sprintf("%s%d", key, subKey)
+func (sl *SkipList) getCompositeKey(key string, subKey uint32, metricType string) string {
+	return fmt.Sprintf("%s%s%d", key, metricType, subKey)
 }
 
 // Inserts a new item in the skiplist
 // If the key exists, it ignores the request
 // Locking is optimistic and happens only after searching.
 func (sl *SkipList) Set(key string, subKey uint32, value *model.MetricItem) {
-	compositeKey := sl.getCompositeKey(key, subKey)
+	compositeKey := sl.getCompositeKey(key, subKey, value.Type)
 
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
@@ -45,7 +44,7 @@ func (sl *SkipList) Set(key string, subKey uint32, value *model.MetricItem) {
 
 	// Key already exists
 	if currentNode != nil && currentNode.key <= compositeKey {
-		if currentNode.value.Type == driver.METRIC_EXT_VALUE {
+		if currentNode.value.Type == model.METRIC_EXT_VALUE {
 			currentNode.value.Value = value.Value
 		} else {
 			currentNode.value.Value += value.Value
@@ -70,8 +69,8 @@ func (sl *SkipList) Set(key string, subKey uint32, value *model.MetricItem) {
 
 // Get finds an element by key. It returns element pointer if found, nil if not found.
 // Get is wait-free. Stale reads are possible, but this is accepted in our environment.
-func (sl *SkipList) Get(key string, subKey uint32) *SkipListNode {
-	compositeKey := sl.getCompositeKey(key, subKey)
+func (sl *SkipList) Get(key string, subKey uint32, metricType string) *SkipListNode {
+	compositeKey := sl.getCompositeKey(key, subKey, metricType)
 
 	var nextNode *SkipListNode
 
@@ -103,7 +102,7 @@ func (sl *SkipList) GetAllAndReset() []*model.MetricItem {
 		// Copy metric struct
 		newItem := *(nextNode.value)
 		// Reset values
-		if nextNode.value.Type != driver.METRIC_EXT_VALUE {
+		if nextNode.value.Type != model.METRIC_EXT_VALUE {
 			nextNode.value.Value = 0
 		}
 		// Sampling time
@@ -118,8 +117,8 @@ func (sl *SkipList) GetAllAndReset() []*model.MetricItem {
 // Remove deletes an element from the list.
 // Returns removed element pointer if found, nil if not found.
 // Locking is optimistic and happens only after searching with a fast check on adjacent nodes after locking.
-func (sl *SkipList) Remove(key string, subKey uint32) {
-	compositeKey := sl.getCompositeKey(key, subKey)
+func (sl *SkipList) Remove(key string, subKey uint32, metricType string) {
+	compositeKey := sl.getCompositeKey(key, subKey, metricType)
 	sl.mutex.Lock()
 	defer sl.mutex.Unlock()
 
