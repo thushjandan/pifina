@@ -13,7 +13,7 @@ import (
 func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Ingress start header byte counter", "sessionIds", sessionIds)
 	// Retrieve register values for selected sessionId
-	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE, METRIC_HDR_BYTES)
+	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE, model.METRIC_BYTES)
 	// If no errors have occured, reset the register
 	if err == nil {
 		// Reset register values
@@ -27,7 +27,7 @@ func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*m
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Ingress end header byte counter", "sessionIds", sessionIds)
-	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE, METRIC_HDR_BYTES)
+	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE, model.METRIC_BYTES)
 	// If no errors have occured, reset the register
 	if err == nil {
 		// Reset register values
@@ -41,7 +41,7 @@ func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*mod
 // Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Debug("Requesting Egress end byte counter", "sessionIds", sessionIds)
-	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_EGRESS_END_CNT, METRIC_BYTES)
+	metrics, err := driver.GetMetricFromRegister(sessionIds, PROBE_EGRESS_END_CNT, model.METRIC_BYTES)
 	// If no errors have occured, reset the register
 	if err == nil {
 		// Reset register values

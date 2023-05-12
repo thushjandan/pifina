@@ -98,7 +98,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 				transformedMetrics = append(transformedMetrics, &model.MetricItem{
 					SessionId:   sessionId,
 					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:        METRIC_BYTES,
+					Type:        model.METRIC_BYTES,
 					MetricName:  PROBE_EGRESS_START_CNT,
 					LastUpdated: timeNow,
 				})
@@ -108,7 +108,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 				transformedMetrics = append(transformedMetrics, &model.MetricItem{
 					SessionId:   sessionId,
 					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:        METRIC_PKTS,
+					Type:        model.METRIC_PKTS,
 					MetricName:  PROBE_EGRESS_START_CNT,
 					LastUpdated: timeNow,
 				})

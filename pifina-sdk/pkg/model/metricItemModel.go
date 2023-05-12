@@ -14,3 +14,9 @@ type TelemetryMessage struct {
 	Source     string
 	MetricList []*MetricItem
 }
+
+const (
+	METRIC_BYTES     = "METRIC_BYTES"
+	METRIC_PKTS      = "METRIC_PKTS"
+	METRIC_EXT_VALUE = "METRIC_EXT_VALUE"
+)

@@ -48,10 +48,6 @@ const (
 	REGISTER_INDEX_KEY_NAME                   = "$REGISTER_INDEX"
 	COUNTER_SPEC_BYTES                        = "$COUNTER_SPEC_BYTES"
 	COUNTER_SPEC_PKTS                         = "$COUNTER_SPEC_PKTS"
-	METRIC_BYTES                              = "METRIC_BYTES"
-	METRIC_HDR_BYTES                          = "METRIC_HDR_BYTES"
-	METRIC_PKTS                               = "METRIC_PKTS"
-	METRIC_EXT_VALUE                          = "METRIC_EXT_VALUE"
 )
 
 var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT}
