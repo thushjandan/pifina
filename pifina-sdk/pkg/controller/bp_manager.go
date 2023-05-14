@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/thushjandan/pifina/pkg/bufferpool"
+	"github.com/thushjandan/pifina/pkg/controller/bufferpool"
 	"github.com/thushjandan/pifina/pkg/model"
 )
 

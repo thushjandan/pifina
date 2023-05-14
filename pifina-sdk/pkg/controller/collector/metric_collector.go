@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/controller/dataplane/tofino/driver"
 	"github.com/thushjandan/pifina/pkg/model"
 )
 

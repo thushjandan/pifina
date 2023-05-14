@@ -182,7 +182,7 @@ func (driver *TofinoDriver) GetKeysFromMatchSelectors() ([]*model.MatchSelectorE
 			case *bfruntime.KeyField_Lpm:
 				matchSelectorKey.Value = matchType.Lpm.GetValue()
 				matchSelectorKey.MatchType = "LPM"
-				matchSelectorKey.ValueLpm = matchType.Lpm.GetPrefixLen()
+				matchSelectorKey.PrefixLength = matchType.Lpm.GetPrefixLen()
 			}
 			matchSelectorKeys = append(matchSelectorKeys, matchSelectorKey)
 		}

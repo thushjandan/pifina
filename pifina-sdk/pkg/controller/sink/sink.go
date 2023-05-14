@@ -9,7 +9,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/model"
-	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
+	"github.com/thushjandan/pifina/pkg/model/protos/pifina/pifina"
 )
 
 type Sink struct {

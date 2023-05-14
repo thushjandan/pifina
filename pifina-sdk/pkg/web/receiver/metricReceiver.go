@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/model"
-	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
+	"github.com/thushjandan/pifina/pkg/model/protos/pifina/pifina"
 	"github.com/thushjandan/pifina/pkg/web/endpoints"
 	"google.golang.org/protobuf/proto"
 )

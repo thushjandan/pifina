@@ -9,14 +9,14 @@ type MatchSelectorSchema struct {
 }
 
 type MatchSelectorEntry struct {
-	SessionId uint32
-	Keys      []*MatchSelectorKey
+	SessionId uint32              `json:"sessionId"`
+	Keys      []*MatchSelectorKey `json:"keys"`
 }
 
 type MatchSelectorKey struct {
-	FieldId   uint32
-	Value     []byte
-	MatchType string
-	ValueMask []byte
-	ValueLpm  int32
+	FieldId      uint32 `json:"fieldId"`
+	Value        []byte `json:"value"`
+	MatchType    string `json:"matchType"`
+	ValueMask    []byte `json:"valueMask,omitempty"`
+	PrefixLength int32  `json:"valueLpm,omitempty"`
 }

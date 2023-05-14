@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/thushjandan/pifina/pkg/sink/protos/pifina/pifina"
+	"github.com/thushjandan/pifina/pkg/model/protos/pifina/pifina"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

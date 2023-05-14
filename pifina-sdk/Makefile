@@ -1,5 +1,5 @@
 BFRT_COMPILED_PROTO=internal/dataplane/tofino/protos/bfruntime/bfruntime_grpc.pb.go
-PIFINA_COMPILED_PROTO=pkg/sink/protos/pifina/pifina.pb.go
+PIFINA_COMPILED_PROTO=pkg/model/protos/pifina/pifina.pb.go
 SELF_SIGNED_TLS_CERTS=assets/cert.pem
 
 build: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO) $(SELF_SIGNED_TLS_CERTS)
@@ -21,9 +21,9 @@ $(BFRT_COMPILED_PROTO):
 
 $(PIFINA_COMPILED_PROTO):
 	protoc --go_opt=Mpifina.proto=pifina/ \
-	--go_out=./pkg/sink/protos/pifina/ \
-	--proto_path=./pkg/sink/protos/ \
-	./pkg/sink/protos/pifina.proto
+	--go_out=./pkg/model/protos/pifina/ \
+	--proto_path=./pkg/model/protos/ \
+	./pkg/model/protos/pifina.proto
 
 $(SELF_SIGNED_TLS_CERTS):
 	openssl req -x509 -newkey  ec -pkeyopt ec_paramgen_curve:prime256v1 \

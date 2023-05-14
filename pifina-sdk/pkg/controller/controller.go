@@ -5,11 +5,11 @@ import (
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/bufferpool"
-	"github.com/thushjandan/pifina/pkg/collector"
-	"github.com/thushjandan/pifina/pkg/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/controller/bufferpool"
+	"github.com/thushjandan/pifina/pkg/controller/collector"
+	"github.com/thushjandan/pifina/pkg/controller/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/controller/sink"
 	"github.com/thushjandan/pifina/pkg/model"
-	"github.com/thushjandan/pifina/pkg/sink"
 )
 
 type TofinoController struct {
