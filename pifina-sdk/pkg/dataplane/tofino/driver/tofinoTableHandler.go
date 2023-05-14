@@ -10,7 +10,7 @@ import (
 )
 
 func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.MetricItem, error) {
-	driver.logger.Debug("Requesting ingress start match selector counter")
+	driver.logger.Trace("Requesting ingress start match selector counter")
 	entities, err := driver.GetMatchSelectorEntries()
 	if err != nil {
 		return nil, err
@@ -140,62 +140,8 @@ func (driver *TofinoDriver) GetMatchSelectorEntries() ([]*bfruntime.Entity, erro
 	return entities, err
 }
 
-func (driver *TofinoDriver) ResetTableDirectCounter() error {
-	dataNames := []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}
-	dataSize := 8
-
-	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
-	if !ok {
-		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
-	}
-
-	tblId := driver.GetTableIdByName(tblName)
-	if tblId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
-	}
-
-	var dataFields []*bfruntime.DataField
-	for _, dataName := range dataNames {
-		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
-		if dataId == 0 {
-			return &ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
-		}
-		dataField := &bfruntime.DataField{
-			FieldId: dataId,
-			Value: &bfruntime.DataField_Stream{
-				Stream: make([]byte, dataSize),
-			},
-		}
-		dataFields = append(dataFields, dataField)
-	}
-
-	tblEntries := []*bfruntime.Update{}
-
-	tblEntries = append(tblEntries,
-		&bfruntime.Update{
-			Entity: &bfruntime.Entity{
-				Entity: &bfruntime.Entity_TableEntry{
-					TableEntry: &bfruntime.TableEntry{
-						IsDefaultEntry: false,
-						TableId:        tblId,
-						Data: &bfruntime.TableData{
-							Fields: dataFields,
-						},
-					},
-				},
-			},
-		},
-	)
-
-	err := driver.SendWriteRequest(tblEntries)
-	if err != nil {
-		driver.logger.Error("Error occured during table counter reset.", "err", err)
-	}
-	return nil
-}
-
 // Retrieve a list of configured session Id from device
-func (driver *TofinoDriver) GetSessionsFromMatchSelectors() ([]uint32, error) {
+func (driver *TofinoDriver) GetKeysFromMatchSelectors() ([]*model.MatchSelectorEntry, error) {
 	entries, err := driver.GetMatchSelectorEntries()
 	if err != nil {
 		return nil, err
@@ -216,8 +162,30 @@ func (driver *TofinoDriver) GetSessionsFromMatchSelectors() ([]uint32, error) {
 		return nil, &ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
-	sessions := make([]uint32, 0, len(entries))
+	matchSelectorEntries := make([]*model.MatchSelectorEntry, 0, len(entries))
 	for i := range entries {
+		matchSelectorEntry := &model.MatchSelectorEntry{}
+		keyFields := entries[i].GetTableEntry().GetKey().GetFields()
+		matchSelectorKeys := make([]*model.MatchSelectorKey, 0, len(keyFields))
+		for key_i := range keyFields {
+			matchSelectorKey := &model.MatchSelectorKey{
+				FieldId: keyFields[key_i].GetFieldId(),
+			}
+			switch matchType := keyFields[key_i].GetMatchType().(type) {
+			case *bfruntime.KeyField_Exact_:
+				matchSelectorKey.Value = matchType.Exact.GetValue()
+				matchSelectorKey.MatchType = "Exact"
+			case *bfruntime.KeyField_Ternary_:
+				matchSelectorKey.Value = matchType.Ternary.GetValue()
+				matchSelectorKey.MatchType = "Ternary"
+				matchSelectorKey.ValueMask = matchType.Ternary.GetMask()
+			case *bfruntime.KeyField_Lpm:
+				matchSelectorKey.Value = matchType.Lpm.GetValue()
+				matchSelectorKey.MatchType = "LPM"
+				matchSelectorKey.ValueLpm = matchType.Lpm.GetPrefixLen()
+			}
+			matchSelectorKeys = append(matchSelectorKeys, matchSelectorKey)
+		}
 		actionFields := entries[i].GetTableEntry().GetData().GetFields()
 		for action_i := range actionFields {
 			// Search for sessionId field
@@ -226,16 +194,19 @@ func (driver *TofinoDriver) GetSessionsFromMatchSelectors() ([]uint32, error) {
 				buffer := make([]byte, 4)
 				copy(buffer[len(buffer)-len(rawValue):], rawValue)
 				// Parse to uint32
-				sessions = append(sessions, binary.BigEndian.Uint32(buffer))
+				parsedSessionId := binary.BigEndian.Uint32(buffer)
+				matchSelectorEntry.SessionId = parsedSessionId
+				matchSelectorEntry.Keys = matchSelectorKeys
+				matchSelectorEntries = append(matchSelectorEntries, matchSelectorEntry)
 				break
 			}
 		}
 	}
 
 	// Sort the sessionIds
-	sort.Slice(sessions, func(i, j int) bool { return sessions[i] < sessions[j] })
+	sort.Slice(matchSelectorEntries, func(i, j int) bool { return matchSelectorEntries[i].SessionId < matchSelectorEntries[j].SessionId })
 
-	return sessions, err
+	return matchSelectorEntries, err
 }
 
 // Returns the width of the sessionId parameter

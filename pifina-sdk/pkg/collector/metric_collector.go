@@ -11,10 +11,10 @@ import (
 )
 
 type MetricCollector struct {
-	logger         hclog.Logger
-	driver         *driver.TofinoDriver
-	sessionIdCache []uint32
-	sampleInterval time.Duration
+	logger                  hclog.Logger
+	driver                  *driver.TofinoDriver
+	matchSelectorEntryCache []*model.MatchSelectorEntry
+	sampleInterval          time.Duration
 }
 
 func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int) *MetricCollector {
@@ -27,22 +27,33 @@ func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sample
 
 // Retrieve the match selector entries and extract the session IDs.
 func (collector *MetricCollector) LoadSessionsFromDevice() error {
-	sessions, err := collector.driver.GetSessionsFromMatchSelectors()
+	matchSelectorEntries, err := collector.driver.GetKeysFromMatchSelectors()
 	if err != nil {
 		return err
 	}
-	collector.sessionIdCache = sessions
+	collector.matchSelectorEntryCache = matchSelectorEntries
 	return nil
 
 }
 
+func (collector *MetricCollector) GetMatchSelectorCache() []*model.MatchSelectorEntry {
+	return collector.matchSelectorEntryCache
+}
+
+// Returns just a list of sessionIds from the cache
 func (collector *MetricCollector) GetSessionIdCache() []uint32 {
-	return collector.sessionIdCache
+	sessionIds := make([]uint32, 0, len(collector.matchSelectorEntryCache))
+
+	for i := range collector.matchSelectorEntryCache {
+		sessionIds = append(sessionIds, collector.matchSelectorEntryCache[i].SessionId)
+	}
+
+	return sessionIds
 }
 
 func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	// If sessionId cache is empty, then refresh the cache
-	if collector.sessionIdCache == nil {
+	if collector.matchSelectorEntryCache == nil {
 		err := collector.LoadSessionsFromDevice()
 		if err != nil {
 			collector.logger.Error("Error occured during collection. Cannot retrieve sessionIds from Ingress Start Match table", "err", err)
@@ -103,7 +114,8 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 	for {
 		select {
 		case <-ticker.C:
-			metrics, err := collector.driver.GetIngressHdrStartCounter(collector.sessionIdCache)
+			sessionIds := collector.GetSessionIdCache()
+			metrics, err := collector.driver.GetIngressHdrStartCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header start size counter", "err", err)
 			} else {
@@ -127,7 +139,8 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 	for {
 		select {
 		case <-ticker.C:
-			metrics, err := collector.driver.GetIngressHdrEndCounter(collector.sessionIdCache)
+			sessionIds := collector.GetSessionIdCache()
+			metrics, err := collector.driver.GetIngressHdrEndCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header end size counter", "err", err)
 			} else {
@@ -152,7 +165,8 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 	for {
 		select {
 		case <-ticker.C:
-			metrics, err := collector.driver.GetEgressStartCounter(collector.sessionIdCache)
+			sessionIds := collector.GetSessionIdCache()
+			metrics, err := collector.driver.GetEgressStartCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
 			} else {
@@ -178,7 +192,8 @@ func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, w
 	for {
 		select {
 		case <-ticker.C:
-			metrics, err := collector.driver.GetEgressEndCounter(collector.sessionIdCache)
+			sessionIds := collector.GetSessionIdCache()
+			metrics, err := collector.driver.GetEgressEndCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress End counter", "err", err)
 			} else {

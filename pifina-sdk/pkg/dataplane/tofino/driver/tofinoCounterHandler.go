@@ -10,10 +10,10 @@ import (
 
 // Retrieve egress start packet counter by a list of sessionIds, which are used as index
 func (driver *TofinoDriver) GetEgressStartCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
-	driver.logger.Debug("Requesting Egress start byte counter", "sessionIds", sessionIds)
+	driver.logger.Trace("Requesting Egress start byte counter", "sessionIds", sessionIds)
 	metrics, err := driver.GetMetricFromCounter(sessionIds, PROBE_EGRESS_START_CNT)
 	if err == nil {
-		//driver.ResetCounter(sessionIds, PROBE_EGRESS_START_CNT)
+		driver.ResetCounter(sessionIds, PROBE_EGRESS_START_CNT)
 	}
 
 	return metrics, err
@@ -75,7 +75,7 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 			},
 		)
 	}
-	driver.logger.Debug("Requesting Egress start byte counter", "sessionIds", sessionIds)
+	driver.logger.Trace("Requesting Egress start byte counter", "sessionIds", sessionIds)
 
 	// Send read request to switch.
 	entities, err := driver.SendReadRequest(tblEntries)

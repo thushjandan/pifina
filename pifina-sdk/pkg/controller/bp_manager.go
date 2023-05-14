@@ -22,8 +22,8 @@ func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sy
 
 	// Amount of static probes * variable length of sessionId = upper bound
 	upperBound := int(math.Pow(2, float64(sessionIdWidth)))
-	if len(ctrl.collector.GetSessionIdCache()) > 0 {
-		upperBound = upperBound * len(ctrl.collector.GetSessionIdCache())
+	if len(ctrl.collector.GetMatchSelectorCache()) > 0 {
+		upperBound = upperBound * len(ctrl.collector.GetMatchSelectorCache())
 	}
 
 	ctrl.logger.Debug("Creating bufferpool", "upperBound", upperBound)
@@ -39,7 +39,7 @@ func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sy
 		case newMetric := <-c:
 			// Check if buffer pool is ready
 			if !notReady {
-				ctrl.logger.Debug("Adding a new metric to buffer pool", "metricName", newMetric.MetricName, "sessionId", newMetric.SessionId)
+				ctrl.logger.Trace("Adding a new metric to buffer pool", "metricName", newMetric.MetricName, "sessionId", newMetric.SessionId)
 				ctrl.addMetricToStorage(ctx, newMetric)
 			}
 		case <-ctx.Done():
