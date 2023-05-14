@@ -22,8 +22,8 @@ func (ctrl *TofinoController) StartBufferpoolManager(ctx context.Context, wg *sy
 
 	// Amount of static probes * variable length of sessionId = upper bound
 	upperBound := int(math.Pow(2, float64(sessionIdWidth)))
-	if len(ctrl.collector.GetMatchSelectorCache()) > 0 {
-		upperBound = upperBound * len(ctrl.collector.GetMatchSelectorCache())
+	if len(ctrl.ts.GetTrafficSelectorCache()) > 0 {
+		upperBound = upperBound * len(ctrl.ts.GetTrafficSelectorCache())
 	}
 
 	ctrl.logger.Debug("Creating bufferpool", "upperBound", upperBound)

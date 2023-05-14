@@ -7,58 +7,31 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/controller/dataplane/tofino/driver"
+	"github.com/thushjandan/pifina/pkg/controller/trafficselector"
 	"github.com/thushjandan/pifina/pkg/model"
 )
 
 type MetricCollector struct {
-	logger                  hclog.Logger
-	driver                  *driver.TofinoDriver
-	matchSelectorEntryCache []*model.MatchSelectorEntry
-	sampleInterval          time.Duration
+	logger         hclog.Logger
+	driver         *driver.TofinoDriver
+	sampleInterval time.Duration
+	ts             *trafficselector.TrafficSelector
 }
 
-func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int) *MetricCollector {
+func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int, ts *trafficselector.TrafficSelector) *MetricCollector {
 	return &MetricCollector{
 		logger:         logger.Named("collector"),
 		driver:         driver,
 		sampleInterval: time.Duration(sampleInterval) * time.Millisecond,
+		ts:             ts,
 	}
-}
-
-// Retrieve the match selector entries and extract the session IDs.
-func (collector *MetricCollector) LoadSessionsFromDevice() error {
-	matchSelectorEntries, err := collector.driver.GetKeysFromMatchSelectors()
-	if err != nil {
-		return err
-	}
-	collector.matchSelectorEntryCache = matchSelectorEntries
-	return nil
-
-}
-
-func (collector *MetricCollector) GetMatchSelectorCache() []*model.MatchSelectorEntry {
-	return collector.matchSelectorEntryCache
-}
-
-// Returns just a list of sessionIds from the cache
-func (collector *MetricCollector) GetSessionIdCache() []uint32 {
-	sessionIds := make([]uint32, 0, len(collector.matchSelectorEntryCache))
-
-	for i := range collector.matchSelectorEntryCache {
-		sessionIds = append(sessionIds, collector.matchSelectorEntryCache[i].SessionId)
-	}
-
-	return sessionIds
 }
 
 func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	// If sessionId cache is empty, then refresh the cache
-	if collector.matchSelectorEntryCache == nil {
-		err := collector.LoadSessionsFromDevice()
-		if err != nil {
-			collector.logger.Error("Error occured during collection. Cannot retrieve sessionIds from Ingress Start Match table", "err", err)
-			return
-		}
+	if collector.ts.GetTrafficSelectorCache() == nil {
+		collector.logger.Error("Cannot start collection! Cannot retrieve sessionIds from Ingress Start Match table. Exiting.")
+		return
 	}
 
 	wg.Add(1)
@@ -114,7 +87,7 @@ func (collector *MetricCollector) CollectIngressHdrStartCounter(ctx context.Cont
 	for {
 		select {
 		case <-ticker.C:
-			sessionIds := collector.GetSessionIdCache()
+			sessionIds := collector.ts.GetSessionIdCache()
 			metrics, err := collector.driver.GetIngressHdrStartCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header start size counter", "err", err)
@@ -139,7 +112,7 @@ func (collector *MetricCollector) CollectIngressHdrEndCounter(ctx context.Contex
 	for {
 		select {
 		case <-ticker.C:
-			sessionIds := collector.GetSessionIdCache()
+			sessionIds := collector.ts.GetSessionIdCache()
 			metrics, err := collector.driver.GetIngressHdrEndCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress header end size counter", "err", err)
@@ -165,7 +138,7 @@ func (collector *MetricCollector) CollectEgressStartCounter(ctx context.Context,
 	for {
 		select {
 		case <-ticker.C:
-			sessionIds := collector.GetSessionIdCache()
+			sessionIds := collector.ts.GetSessionIdCache()
 			metrics, err := collector.driver.GetEgressStartCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress Start counter", "err", err)
@@ -192,7 +165,7 @@ func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, w
 	for {
 		select {
 		case <-ticker.C:
-			sessionIds := collector.GetSessionIdCache()
+			sessionIds := collector.ts.GetSessionIdCache()
 			metrics, err := collector.driver.GetEgressEndCounter(sessionIds)
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Egress End counter", "err", err)

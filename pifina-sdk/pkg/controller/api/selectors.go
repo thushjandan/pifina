@@ -6,7 +6,7 @@ import (
 )
 
 func (s *ControllerApiServer) GetSelectors(rw http.ResponseWriter, r *http.Request) {
-	matchSelectors := s.collector.GetMatchSelectorCache()
+	matchSelectors := s.ts.GetTrafficSelectorCache()
 	json.NewEncoder(rw).Encode(matchSelectors)
 	rw.Header().Set("Content-Type", "application/json")
 }

@@ -20,6 +20,7 @@ func main() {
 	bfrt_endpoint := flag.String("bfrt", "127.0.0.1:50052", "BF runtime GRPC server address (Dataplane endpoint)")
 	p4_name := flag.String("p4name", "", "Name of the P4 application. e.g. myapp")
 	collector_server := flag.String("server", "127.0.0.1:8654", "PIFINA collector address")
+	api_port := flag.String("port", ":8656", "Controller API port to listen")
 	version_flag := flag.Bool("version", false, "show version")
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
 	sample_interval := flag.Int("sample-interval-ms", 1000, "Sample interval in ms. Default 100ms")
@@ -54,7 +55,15 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
-	controller := controller.NewTofinoController(logger, *bfrt_endpoint, *p4_name, *collector_server, *sample_interval)
+	options := &controller.TofinoControllerOptions{
+		Logger:                  logger,
+		Endpoint:                *bfrt_endpoint,
+		P4name:                  *p4_name,
+		CollectorServerEndpoint: *collector_server,
+		SampleInterval:          *sample_interval,
+		APIPort:                 *api_port,
+	}
+	controller := controller.NewTofinoController(options)
 	err = controller.StartController(ctx, &wg, *connect_timeout)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)

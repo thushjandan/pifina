@@ -19,7 +19,7 @@ from scapy.all import (
 )
 
 # Number of tuples to generate
-NUMBER_ENTRIES = 1
+NUMBER_ENTRIES = 100
 # Generate randomly the entityIds from a range of 0 to 1000
 RANDOM_ENTITYIDS = random.sample(range(0, 1000), NUMBER_ENTRIES)
 
