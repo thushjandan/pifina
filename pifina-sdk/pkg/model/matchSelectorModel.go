@@ -26,6 +26,12 @@ type MatchSelectorKey struct {
 	PrefixLength int32  `json:"valueLpm,omitempty"`
 }
 
+const (
+	MATCH_TYPE_EXACT   = "Exact"
+	MATCH_TYPE_TERNARY = "Ternary"
+	MATCH_TYPE_LPM     = "LPM"
+)
+
 func (key *MatchSelectorKey) MarshalJSON() ([]byte, error) {
 	type Alias MatchSelectorKey
 	return json.Marshal(&struct {

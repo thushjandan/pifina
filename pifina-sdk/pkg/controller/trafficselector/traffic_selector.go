@@ -1,6 +1,9 @@
 package trafficselector
 
 import (
+	"math"
+	"math/rand"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/controller/dataplane/tofino/driver"
 	"github.com/thushjandan/pifina/pkg/model"
@@ -19,8 +22,53 @@ func NewTrafficSelector(logger hclog.Logger, d *driver.TofinoDriver) *TrafficSel
 	}
 }
 
-func (t *TrafficSelector) AddTrafficSelectorRule() {
-	panic("not implemented")
+// Add a new selector rule in the dataplane
+// It will generate a new sessionId for the rule.
+func (t *TrafficSelector) AddTrafficSelectorRule(newSelectorRule *model.MatchSelectorEntry) error {
+	var randomSessionId uint32
+	sessionBitWidth, err := t.driver.GetSessionIdBitWidth()
+	if err != nil {
+		return err
+	}
+	sessionIdsMap := make(map[uint32]struct{})
+	for i := range t.matchSelectorEntryCache {
+		sessionIdsMap[t.matchSelectorEntryCache[i].SessionId] = struct{}{}
+	}
+
+	// Get the upperbound for a sessionId
+	max := int(math.Pow(2, float64(sessionBitWidth)))
+	// Find a unique sessionId
+	randomSessionId = uint32(rand.Intn(max-1) + 1)
+	// Check if new sessionId is unique
+	_, ok := sessionIdsMap[randomSessionId]
+	// Find until new sessionId is unique
+	for ok {
+		t.logger.Debug("Overlap in sessionId has been found. Generating a new sessionId")
+		randomSessionId = uint32(rand.Intn(max-1) + 1)
+		_, ok = sessionIdsMap[randomSessionId]
+	}
+	newSelectorRule.SessionId = randomSessionId
+	t.logger.Debug("A new entry will be added in the dataplane", "sessionId", randomSessionId)
+	// Create rule in dataplane
+	err = t.driver.AddSelectorEntry(newSelectorRule)
+	if err != nil {
+		return err
+	}
+	// Refresh match selector cache
+	err = t.LoadSessionsFromDevice()
+	return err
+}
+
+// Remove an existing selector rule from dataplane
+func (t *TrafficSelector) RemoveTrafficSelectorRule(selectorRule *model.MatchSelectorEntry) error {
+	// Remove rule from dataplane
+	err := t.driver.RemoveSelectorEntry(selectorRule)
+	if err != nil {
+		return err
+	}
+	// Refresh match selector cache
+	err = t.LoadSessionsFromDevice()
+	return err
 }
 
 // Retrieve the match selector entries and extract the session IDs.

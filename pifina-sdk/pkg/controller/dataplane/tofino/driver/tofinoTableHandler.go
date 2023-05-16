@@ -174,14 +174,14 @@ func (driver *TofinoDriver) GetKeysFromMatchSelectors() ([]*model.MatchSelectorE
 			switch matchType := keyFields[key_i].GetMatchType().(type) {
 			case *bfruntime.KeyField_Exact_:
 				matchSelectorKey.Value = matchType.Exact.GetValue()
-				matchSelectorKey.MatchType = "Exact"
+				matchSelectorKey.MatchType = model.MATCH_TYPE_EXACT
 			case *bfruntime.KeyField_Ternary_:
 				matchSelectorKey.Value = matchType.Ternary.GetValue()
-				matchSelectorKey.MatchType = "Ternary"
+				matchSelectorKey.MatchType = model.MATCH_TYPE_TERNARY
 				matchSelectorKey.ValueMask = matchType.Ternary.GetMask()
 			case *bfruntime.KeyField_Lpm:
 				matchSelectorKey.Value = matchType.Lpm.GetValue()
-				matchSelectorKey.MatchType = "LPM"
+				matchSelectorKey.MatchType = model.MATCH_TYPE_LPM
 				matchSelectorKey.PrefixLength = matchType.Lpm.GetPrefixLen()
 			}
 			matchSelectorKeys = append(matchSelectorKeys, matchSelectorKey)
@@ -233,4 +233,201 @@ func (driver *TofinoDriver) GetSessionIdBitWidth() (uint32, error) {
 	}
 
 	return sessionIdWidth, nil
+}
+
+func (driver *TofinoDriver) AddSelectorEntry(newEntry *model.MatchSelectorEntry) error {
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
+	actionId := driver.GetActionIdByName(tblName, actionName)
+	if actionId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find action name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+	}
+
+	dataId := driver.GetDataIdByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
+	if dataId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find action param name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
+	}
+
+	keyFields := []*bfruntime.KeyField{}
+
+	for _, keyItem := range newEntry.Keys {
+		switch keyItem.MatchType {
+		case model.MATCH_TYPE_EXACT:
+			keyFields = append(keyFields, &bfruntime.KeyField{
+				FieldId: keyItem.FieldId,
+				MatchType: &bfruntime.KeyField_Exact_{
+					Exact: &bfruntime.KeyField_Exact{
+						Value: keyItem.Value,
+					},
+				},
+			})
+		case model.MATCH_TYPE_TERNARY:
+			keyFields = append(keyFields, &bfruntime.KeyField{
+				FieldId: keyItem.FieldId,
+				MatchType: &bfruntime.KeyField_Ternary_{
+					Ternary: &bfruntime.KeyField_Ternary{
+						Value: keyItem.Value,
+						Mask:  keyItem.ValueMask,
+					},
+				},
+			})
+		case model.MATCH_TYPE_LPM:
+			keyFields = append(keyFields, &bfruntime.KeyField{
+				FieldId: keyItem.FieldId,
+				MatchType: &bfruntime.KeyField_Lpm{
+					Lpm: &bfruntime.KeyField_LPM{
+						Value:     keyItem.Value,
+						PrefixLen: keyItem.PrefixLength,
+					},
+				},
+			})
+		}
+	}
+
+	// Convert to byte slice
+	byteSessionId := make([]byte, 4)
+	binary.BigEndian.PutUint32(byteSessionId, newEntry.SessionId)
+	sessionIdWidth, err := driver.GetSessionIdBitWidth()
+	if err != nil {
+		return err
+	}
+	// Calculate, which from where to select the bytes
+	byteArrayWidth := len(byteSessionId) - ((int(sessionIdWidth) / 8) + 1)
+
+	dataFields := []*bfruntime.DataField{
+		{
+			FieldId: dataId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: byteSessionId[byteArrayWidth:],
+			},
+		},
+	}
+
+	tblEntry := &bfruntime.Entity{
+		Entity: &bfruntime.Entity_TableEntry{
+			TableEntry: &bfruntime.TableEntry{
+				TableId: tblId,
+				Value: &bfruntime.TableEntry_Key{
+					Key: &bfruntime.TableKey{
+						Fields: keyFields,
+					},
+				},
+				Data: &bfruntime.TableData{
+					ActionId: actionId,
+					Fields:   dataFields,
+				},
+			},
+		},
+	}
+
+	updateReq := []*bfruntime.Update{
+		{
+			Type:   bfruntime.Update_INSERT,
+			Entity: tblEntry,
+		},
+	}
+
+	err = driver.SendWriteRequest(updateReq)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (driver *TofinoDriver) RemoveSelectorEntry(entry *model.MatchSelectorEntry) error {
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
+
+	actionId := driver.GetActionIdByName(tblName, actionName)
+	if actionId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find action name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+	}
+
+	dataId := driver.GetDataIdByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
+	if dataId == 0 {
+		return &ErrNameNotFound{Msg: "Cannot find action param name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
+	}
+
+	keyFields := []*bfruntime.KeyField{}
+
+	for _, keyItem := range entry.Keys {
+		switch keyItem.MatchType {
+		case model.MATCH_TYPE_EXACT:
+			keyFields = append(keyFields, &bfruntime.KeyField{
+				FieldId: keyItem.FieldId,
+				MatchType: &bfruntime.KeyField_Exact_{
+					Exact: &bfruntime.KeyField_Exact{
+						Value: keyItem.Value,
+					},
+				},
+			})
+		case model.MATCH_TYPE_TERNARY:
+			keyFields = append(keyFields, &bfruntime.KeyField{
+				FieldId: keyItem.FieldId,
+				MatchType: &bfruntime.KeyField_Ternary_{
+					Ternary: &bfruntime.KeyField_Ternary{
+						Value: keyItem.Value,
+						Mask:  keyItem.ValueMask,
+					},
+				},
+			})
+		case model.MATCH_TYPE_LPM:
+			keyFields = append(keyFields, &bfruntime.KeyField{
+				FieldId: keyItem.FieldId,
+				MatchType: &bfruntime.KeyField_Lpm{
+					Lpm: &bfruntime.KeyField_LPM{
+						Value:     keyItem.Value,
+						PrefixLen: keyItem.PrefixLength,
+					},
+				},
+			})
+		}
+	}
+
+	tblEntry := &bfruntime.Entity{
+		Entity: &bfruntime.Entity_TableEntry{
+			TableEntry: &bfruntime.TableEntry{
+				TableId: tblId,
+				Value: &bfruntime.TableEntry_Key{
+					Key: &bfruntime.TableKey{
+						Fields: keyFields,
+					},
+				},
+			},
+		},
+	}
+
+	updateReq := []*bfruntime.Update{
+		{
+			Type:   bfruntime.Update_DELETE,
+			Entity: tblEntry,
+		},
+	}
+
+	// Send delete request
+	err := driver.SendWriteRequest(updateReq)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
