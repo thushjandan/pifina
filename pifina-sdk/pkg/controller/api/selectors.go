@@ -14,7 +14,6 @@ func (s *ControllerApiServer) GetSelectors(rw http.ResponseWriter, r *http.Reque
 }
 
 func (s *ControllerApiServer) AddNewSelector(rw http.ResponseWriter, r *http.Request) {
-	s.logger.Debug("Adding a new selector on the control plane")
 	var matchSelectorEntry model.MatchSelectorEntry
 
 	err := json.NewDecoder(r.Body).Decode(&matchSelectorEntry)
@@ -38,7 +37,6 @@ func (s *ControllerApiServer) AddNewSelector(rw http.ResponseWriter, r *http.Req
 }
 
 func (s *ControllerApiServer) RemoveSelector(rw http.ResponseWriter, r *http.Request) {
-	s.logger.Debug("Adding a new selector on the control plane")
 	var matchSelectorEntry model.MatchSelectorEntry
 
 	err := json.NewDecoder(r.Body).Decode(&matchSelectorEntry)
