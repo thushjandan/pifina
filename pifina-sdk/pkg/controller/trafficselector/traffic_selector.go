@@ -105,3 +105,8 @@ func (t *TrafficSelector) GetSessionIdCache() []uint32 {
 
 	return sessionIds
 }
+
+// Retrieves schema of keys from the P4 schema cache.
+func (t *TrafficSelector) GetTrafficSelectorSchema() ([]*model.MatchSelectorSchema, error) {
+	return t.driver.GetIngressStartMatchSelectorSchema()
+}

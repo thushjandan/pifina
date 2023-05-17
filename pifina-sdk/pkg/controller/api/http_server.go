@@ -27,7 +27,8 @@ func NewControllerApiServer(logger hclog.Logger, port string, ts *trafficselecto
 func (s *ControllerApiServer) StartWebServer(ctx context.Context) {
 	// Create a new Mux and set the handler
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/selectors", s.HandleSelectorReq)
+	mux.Handle("/api/v1/selectors", middlewareCORS(http.HandlerFunc(s.HandleSelectorReq)))
+	mux.Handle("/api/v1/schema", middlewareCORS(http.HandlerFunc(s.GetSelectorSchema)))
 
 	s.server = &http.Server{
 		Addr:    s.port,
@@ -48,4 +49,12 @@ func (s *ControllerApiServer) Shutdown() {
 	if err := s.server.Shutdown(timeoutCtx); err != nil {
 		s.logger.Error("Webserver shutdown failed", "err", err)
 	}
+}
+
+func middlewareCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		rw.Header().Set("Content-Type", "application/json")
+		rw.Header().Set("Access-Control-Allow-Origin", "*")
+		next.ServeHTTP(rw, r)
+	})
 }

@@ -6,11 +6,11 @@ import (
 )
 
 type MatchSelectorSchema struct {
-	FieldId   uint32
-	Name      string
-	MatchType string
-	Type      string
-	Width     uint32
+	FieldId   uint32 `json:"id"`
+	Name      string `json:"name"`
+	MatchType string `json:"matchType"`
+	Type      string `json:"type"`
+	Width     uint32 `json:"width,omitempty"`
 }
 
 type MatchSelectorEntry struct {

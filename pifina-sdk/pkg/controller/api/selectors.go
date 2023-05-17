@@ -7,10 +7,18 @@ import (
 	"github.com/thushjandan/pifina/pkg/model"
 )
 
+func (s *ControllerApiServer) GetSelectorSchema(rw http.ResponseWriter, r *http.Request) {
+	keys, err := s.ts.GetTrafficSelectorSchema()
+	if err != nil {
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(rw).Encode(keys)
+}
+
 func (s *ControllerApiServer) GetSelectors(rw http.ResponseWriter, r *http.Request) {
 	matchSelectors := s.ts.GetTrafficSelectorCache()
 	json.NewEncoder(rw).Encode(matchSelectors)
-	rw.Header().Set("Content-Type", "application/json")
 }
 
 func (s *ControllerApiServer) AddNewSelector(rw http.ResponseWriter, r *http.Request) {
@@ -26,7 +34,6 @@ func (s *ControllerApiServer) AddNewSelector(rw http.ResponseWriter, r *http.Req
 	err = s.ts.AddTrafficSelectorRule(&matchSelectorEntry)
 	if err != nil {
 		s.logger.Error("Adding new selector rule failed", "err", err)
-		rw.Header().Set("Content-Type", "application/json")
 		errorMessage := &model.ApiErrorMessage{Message: err.Error(), Code: http.StatusInternalServerError}
 		rw.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(rw).Encode(errorMessage)
@@ -49,7 +56,6 @@ func (s *ControllerApiServer) RemoveSelector(rw http.ResponseWriter, r *http.Req
 	err = s.ts.RemoveTrafficSelectorRule(&matchSelectorEntry)
 	if err != nil {
 		s.logger.Error("Removing selector rule failed", "err", err)
-		rw.Header().Set("Content-Type", "application/json")
 		errorMessage := &model.ApiErrorMessage{Message: err.Error(), Code: http.StatusInternalServerError}
 		rw.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(rw).Encode(errorMessage)

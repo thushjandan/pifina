@@ -431,3 +431,27 @@ func (driver *TofinoDriver) RemoveSelectorEntry(entry *model.MatchSelectorEntry)
 
 	return nil
 }
+
+func (driver *TofinoDriver) GetIngressStartMatchSelectorSchema() ([]*model.MatchSelectorSchema, error) {
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
+		// Create a DTO
+		keys := make([]*model.MatchSelectorSchema, 0, len(driver.P4Tables[sliceIdx].Key))
+		for key_i := range driver.P4Tables[sliceIdx].Key {
+			keys = append(keys, &model.MatchSelectorSchema{
+				FieldId:   driver.P4Tables[sliceIdx].Key[key_i].Id,
+				Name:      driver.P4Tables[sliceIdx].Key[key_i].Name,
+				MatchType: driver.P4Tables[sliceIdx].Key[key_i].MatchType,
+				Type:      driver.P4Tables[sliceIdx].Key[key_i].Type.Type,
+				Width:     driver.P4Tables[sliceIdx].Key[key_i].Type.Width,
+			})
+		}
+		return keys, nil
+	}
+
+	return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+}
