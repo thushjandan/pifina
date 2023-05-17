@@ -5,14 +5,22 @@
 	import TrafficSelector from "./TrafficSelector.svelte";
 
     let localEndpointAddress: string = "";
+    let urlEndpointAddr: URL | null;
 
-    const unsubscribeEndpointAddr = endpointAddress.subscribe(value => localEndpointAddress = value);
+    const unsubscribeEndpointAddr = endpointAddress.subscribe(value => {
+        localEndpointAddress = value;
+        try {
+            urlEndpointAddr = new URL(value);
+        } catch (error) {
+            urlEndpointAddr = null;
+        }
+    });
 
     onDestroy(unsubscribeEndpointAddr);
 </script>
 <header class="bg-white shadow">
     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-bold tracking-tight text-gray-900">Configuration</h1>
+      <h1 class="text-3xl font-bold tracking-tight text-gray-900">Configuration {#if localEndpointAddress != ""} - {urlEndpointAddr?.hostname}{/if}</h1>
     </div>
 </header>
 <main>

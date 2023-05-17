@@ -23,7 +23,7 @@ type MatchSelectorKey struct {
 	Value        []byte `json:"value"`
 	MatchType    string `json:"matchType"`
 	ValueMask    []byte `json:"valueMask,omitempty"`
-	PrefixLength int32  `json:"valueLpm,omitempty"`
+	PrefixLength int32  `json:"prefixLength,omitempty"`
 }
 
 const (

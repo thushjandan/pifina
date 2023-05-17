@@ -3,6 +3,7 @@
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData, MetricItem } from '../lib/models/MetricItem';
 	import { PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE } from '$lib/models/metricNames';
+	import { onDestroy } from 'svelte';
     export let endpoints: string[];
 
 	let cliendScreenWidth;
@@ -64,6 +65,11 @@
 			second: 'numeric'
 		})),
 	};
+	onDestroy(() => {
+		if (typeof evtSource !== 'undefined') {
+			evtSource.close();
+		}
+	});
 </script>
 
 <div class="grid grid-cols-4">
