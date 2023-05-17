@@ -55,6 +55,8 @@ func middlewareCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		rw.Header().Set("Content-Type", "application/json")
 		rw.Header().Set("Access-Control-Allow-Origin", "*")
+		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE")
+		rw.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		next.ServeHTTP(rw, r)
 	})
 }

@@ -9,5 +9,4 @@ export interface SelectorKey {
     matchType: string
     valueMask?: string
     prefixLength?: number
-    transformedValue?: string
 }
