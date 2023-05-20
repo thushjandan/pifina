@@ -3,7 +3,7 @@
 
     let endpointAddressForm = "";
     function saveEndpoint() {
-        endpointAddress.set(endpointAddressForm);
+        endpointAddress.set(endpointAddressForm.trim());
     }
 </script>
 

@@ -27,15 +27,17 @@ func (s *ControllerApiServer) AddNewSelector(rw http.ResponseWriter, r *http.Req
 	err := json.NewDecoder(r.Body).Decode(&matchSelectorEntry)
 	if err != nil {
 		s.logger.Warn("Invalid request body for AddNewSelector API request", "err", err)
+		errorMessage := &model.ApiErrorMessage{Message: "Invalid Hexadecimal character detected. Check your input", Code: http.StatusBadRequest}
 		rw.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(rw).Encode(errorMessage)
 		return
 	}
 
 	err = s.ts.AddTrafficSelectorRule(&matchSelectorEntry)
 	if err != nil {
 		s.logger.Error("Adding new selector rule failed", "err", err)
-		errorMessage := &model.ApiErrorMessage{Message: err.Error(), Code: http.StatusInternalServerError}
-		rw.WriteHeader(http.StatusInternalServerError)
+		errorMessage := &model.ApiErrorMessage{Message: err.Error(), Code: http.StatusBadRequest}
+		rw.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(rw).Encode(errorMessage)
 		return
 	}
