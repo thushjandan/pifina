@@ -29,14 +29,14 @@ func NewPifinaHttpServer(logger hclog.Logger, ed *endpoints.PifinaEndpointDirect
 
 func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyFile string, certFile string, telemetryChannel chan *model.TelemetryMessage) {
 	s.sse = sse.New()
-	s.sse.EventTTL = 15 * time.Second
-	s.sse.CreateStream("metrics")
+	// Disable Replay feature from SSE
+	s.sse.AutoReplay = false
+	// Add CORS header => allows all origins
+	s.sse.Headers["Access-Control-Allow-Origin"] = "*"
+
 	// Create a new Mux and set the handler
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/events", func(rw http.ResponseWriter, r *http.Request) {
-		rw.Header().Set("Access-Control-Allow-Origin", "*")
-		s.sse.ServeHTTP(rw, r)
-	})
+	mux.HandleFunc("/api/v1/events", s.sse.ServeHTTP)
 	mux.HandleFunc("/api/v1/endpoints", s.GetEndpointsHandler)
 
 	s.server = &http.Server{
@@ -78,7 +78,7 @@ func (s *PifinaHttpServer) ListenAndPublishMetrics(ctx context.Context, telemetr
 				continue
 			}
 
-			s.sse.Publish(telemetryItem.Source, &sse.Event{
+			s.sse.TryPublish(telemetryItem.Source, &sse.Event{
 				Data: jsonPayload,
 			})
 		case <-ctx.Done():
