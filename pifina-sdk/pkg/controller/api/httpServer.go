@@ -29,6 +29,8 @@ func (s *ControllerApiServer) StartWebServer(ctx context.Context) {
 	mux := http.NewServeMux()
 	mux.Handle("/api/v1/selectors", middlewareCORS(http.HandlerFunc(s.HandleSelectorReq)))
 	mux.Handle("/api/v1/schema", middlewareCORS(http.HandlerFunc(s.GetSelectorSchema)))
+	mux.Handle("/api/v1/app-registers", middlewareCORS(http.HandlerFunc(s.HandleAppRegisterReq)))
+	mux.Handle("/api/v1/app-registers/available", middlewareCORS(http.HandlerFunc(s.GetAllAppRegisterNames)))
 
 	s.server = &http.Server{
 		Addr:    s.port,

@@ -158,6 +158,9 @@ control SwitchIngress(inout ingress_headers_t hdr,
     PfIngressStartProbe() pfIngressStartProbe;
     PfIngressEndProbe() pfIngressEndProbe;
 
+    // Initialize hash table with value 0
+    Register<bit<8>, PortId_t>(512, 0) database;
+
     action drop() {
         ig_dprsr_md.drop_ctl = 0x1; // drop packet.
     }
@@ -189,6 +192,8 @@ control SwitchIngress(inout ingress_headers_t hdr,
 
         // Run IPv4 routing logic.
         ipv4_lpm.apply();
+        // Dummy register write
+        database.write(ig_tm_md.ucast_egress_port, hdr.ipv4.ttl);
 
         // LAST Operation
         pfIngressEndProbe.apply(hdr, meta);

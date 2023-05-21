@@ -18,12 +18,12 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.Metr
 
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
 	if actionName == "" {
-		return nil, &ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
 	}
 
 	// Get key Ids
@@ -32,7 +32,7 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.Metr
 	sessionIdDataId := driver.GetDataIdByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
 
 	if sessionIdDataId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
 	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
@@ -113,12 +113,12 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.Metr
 func (driver *TofinoDriver) GetMatchSelectorEntries() ([]*bfruntime.Entity, error) {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
 	tblEntries := []*bfruntime.Entity{}
@@ -149,17 +149,17 @@ func (driver *TofinoDriver) GetKeysFromMatchSelectors() ([]*model.MatchSelectorE
 
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
 	if actionName == "" {
-		return nil, &ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
 	}
 
 	sessionIdDataId := driver.GetDataIdByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
 	if sessionIdDataId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
 	matchSelectorEntries := make([]*model.MatchSelectorEntry, 0, len(entries))
@@ -214,22 +214,22 @@ func (driver *TofinoDriver) GetKeysFromMatchSelectors() ([]*model.MatchSelectorE
 func (driver *TofinoDriver) GetSessionIdBitWidth() (uint32, error) {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return 0, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return 0, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return 0, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+		return 0, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
 	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
 	if actionName == "" {
-		return 0, &ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+		return 0, &model.ErrNameNotFound{Msg: "Cannot find full action name for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
 	}
 
 	sessionIdWidth := driver.GetActionDataWidthByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
 	if sessionIdWidth < 1 {
-		return 0, &ErrNameNotFound{Msg: "Cannot find sessionId width on the device", Entity: tblName}
+		return 0, &model.ErrNameNotFound{Msg: "Cannot find sessionId width on the device", Entity: tblName}
 	}
 
 	return sessionIdWidth, nil
@@ -238,23 +238,23 @@ func (driver *TofinoDriver) GetSessionIdBitWidth() (uint32, error) {
 func (driver *TofinoDriver) AddSelectorEntry(newEntry *model.MatchSelectorEntry) error {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+		return &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
 	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
 	actionId := driver.GetActionIdByName(tblName, actionName)
 	if actionId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find action name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+		return &model.ErrNameNotFound{Msg: "Cannot find action name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
 	}
 
 	dataId := driver.GetDataIdByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
 	if dataId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find action param name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
+		return &model.ErrNameNotFound{Msg: "Cannot find action param name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
 	keyFields := []*bfruntime.KeyField{}
@@ -347,24 +347,24 @@ func (driver *TofinoDriver) AddSelectorEntry(newEntry *model.MatchSelectorEntry)
 func (driver *TofinoDriver) RemoveSelectorEntry(entry *model.MatchSelectorEntry) error {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+		return &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
 	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
 
 	actionId := driver.GetActionIdByName(tblName, actionName)
 	if actionId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find action name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
+		return &model.ErrNameNotFound{Msg: "Cannot find action name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME}
 	}
 
 	dataId := driver.GetDataIdByName(tblName, actionName, PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID)
 	if dataId == 0 {
-		return &ErrNameNotFound{Msg: "Cannot find action param name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
+		return &model.ErrNameNotFound{Msg: "Cannot find action param name", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
 	keyFields := []*bfruntime.KeyField{}
@@ -435,7 +435,7 @@ func (driver *TofinoDriver) RemoveSelectorEntry(entry *model.MatchSelectorEntry)
 func (driver *TofinoDriver) GetIngressStartMatchSelectorSchema() ([]*model.MatchSelectorSchema, error) {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
 	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
@@ -453,5 +453,5 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorSchema() ([]*model.Match
 		return keys, nil
 	}
 
-	return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 }

@@ -62,17 +62,17 @@ func (driver *TofinoDriver) GetMetricFromRegister(sessionIds []uint32, shortTblN
 	tblName := driver.FindTableNameByShortName(shortTblName)
 
 	if tblName == "" {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
 	keyId := driver.GetKeyIdByName(tblName, REGISTER_INDEX_KEY_NAME)
 	if keyId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
 	}
 
 	tblEntries := []*bfruntime.Entity{}
@@ -166,4 +166,16 @@ func (driver *TofinoDriver) ResetRegister(sessionIds []uint32, shortTbleName str
 			driver.logger.Error("Register reset has failed", "tblName", shortTbleName, "err", err)
 		}
 	}
+}
+
+func (driver *TofinoDriver) GetAllRegisterNames() []string {
+	registerNames := make([]string, 0)
+
+	for i := range driver.P4Tables {
+		if driver.P4Tables[i].TableType == TABLE_TYPE_REGISTER {
+			registerNames = append(registerNames, driver.P4Tables[i].Name)
+		}
+	}
+
+	return registerNames
 }

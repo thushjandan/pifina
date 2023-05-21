@@ -2,7 +2,6 @@ package driver
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 
 	"github.com/hashicorp/go-hclog"
@@ -27,15 +26,6 @@ type TofinoDriver struct {
 	probeTableMap    map[string]string
 }
 
-type ErrNameNotFound struct {
-	Entity string
-	Msg    string
-}
-
-func (e *ErrNameNotFound) Error() string {
-	return fmt.Sprintf("%s - Entity: %s", e.Msg, e.Entity)
-}
-
 const (
 	PROBE_INGRESS_MATCH_CNT                   = "PF_INGRESS_MATCH_CNT"
 	PROBE_INGRESS_START_HDR_SIZE              = "PF_INGRESS_START_HDR_SIZE"
@@ -48,6 +38,7 @@ const (
 	REGISTER_INDEX_KEY_NAME                   = "$REGISTER_INDEX"
 	COUNTER_SPEC_BYTES                        = "$COUNTER_SPEC_BYTES"
 	COUNTER_SPEC_PKTS                         = "$COUNTER_SPEC_PKTS"
+	TABLE_TYPE_REGISTER                       = "Register"
 )
 
 var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT}

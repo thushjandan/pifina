@@ -27,17 +27,17 @@ func (driver *TofinoDriver) GetMetricFromCounter(sessionIds []uint32, shortTblNa
 
 	tblName, ok := driver.probeTableMap[shortTblName]
 	if !ok {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
 	}
 
 	keyId := driver.GetKeyIdByName(tblName, COUNTER_INDEX_KEY_NAME)
 	if keyId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
 	}
 
 	tblEntries := []*bfruntime.Entity{}

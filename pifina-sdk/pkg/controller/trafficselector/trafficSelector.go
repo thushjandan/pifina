@@ -3,6 +3,7 @@ package trafficselector
 import (
 	"math"
 	"math/rand"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/controller/dataplane/tofino/driver"
@@ -13,12 +14,15 @@ type TrafficSelector struct {
 	logger                  hclog.Logger
 	driver                  *driver.TofinoDriver
 	matchSelectorEntryCache []*model.MatchSelectorEntry
+	appRegisterProbes       []string
+	appRegisterProbesLock   sync.RWMutex
 }
 
 func NewTrafficSelector(logger hclog.Logger, d *driver.TofinoDriver) *TrafficSelector {
 	return &TrafficSelector{
-		logger: logger.Named("traffic-sel"),
-		driver: d,
+		logger:            logger.Named("traffic-sel"),
+		driver:            d,
+		appRegisterProbes: make([]string, 0),
 	}
 }
 

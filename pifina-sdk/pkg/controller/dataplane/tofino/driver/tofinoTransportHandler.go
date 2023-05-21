@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
+	"github.com/thushjandan/pifina/pkg/model"
 	"google.golang.org/grpc"
 )
 
@@ -126,17 +127,17 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 
 	if tblName == "" {
 		driver.logger.Error("cannot find table for the probe", "tblName", tblName)
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name", Entity: tblName}
 	}
 
 	tblId := driver.GetTableIdByName(tblName)
 	if tblId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find table name", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name", Entity: tblName}
 	}
 
 	keyId := driver.GetKeyIdByName(tblName, keyName)
 	if keyId == 0 {
-		return nil, &ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find key id for table name", Entity: tblName}
 	}
 	// Convert to byte slice
 	byteEntryId := make([]byte, 4)
@@ -157,7 +158,7 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 	for _, dataName := range dataNames {
 		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
 		if dataId == 0 {
-			return nil, &ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
+			return nil, &model.ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
 		}
 		// Set the counter value to 0. The byte array needs to have the same length as on the dataplane
 		dataField := &bfruntime.DataField{
