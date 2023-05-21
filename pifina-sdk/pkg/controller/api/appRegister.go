@@ -33,7 +33,7 @@ func (s *ControllerApiServer) GetAllAppRegisterNames(rw http.ResponseWriter, r *
 }
 
 func (s *ControllerApiServer) createAppRegisterProbe(rw http.ResponseWriter, r *http.Request) {
-	var newEntry model.ApiRequestAppRegister
+	var newEntry *model.AppRegister
 	err := json.NewDecoder(r.Body).Decode(&newEntry)
 	if err != nil {
 		errorMessage := &model.ApiErrorMessage{Message: "Invalid json. Check your input", Code: http.StatusBadRequest}
@@ -48,7 +48,7 @@ func (s *ControllerApiServer) createAppRegisterProbe(rw http.ResponseWriter, r *
 		return
 	}
 
-	err = s.ts.AddAppRegisterProbe(newEntry.Name)
+	err = s.ts.AddAppRegisterProbe(newEntry)
 	if err != nil {
 		errorMessage := &model.ApiErrorMessage{Message: err.Error(), Code: http.StatusBadRequest}
 		rw.WriteHeader(http.StatusBadRequest)
@@ -60,7 +60,7 @@ func (s *ControllerApiServer) createAppRegisterProbe(rw http.ResponseWriter, r *
 }
 
 func (s *ControllerApiServer) deleteAppRegisterProbe(rw http.ResponseWriter, r *http.Request) {
-	var newEntry model.ApiRequestAppRegister
+	var newEntry *model.AppRegister
 	err := json.NewDecoder(r.Body).Decode(&newEntry)
 	if err != nil {
 		errorMessage := &model.ApiErrorMessage{Message: "Invalid json. Check your input", Code: http.StatusBadRequest}
@@ -75,7 +75,7 @@ func (s *ControllerApiServer) deleteAppRegisterProbe(rw http.ResponseWriter, r *
 		return
 	}
 
-	s.ts.RemoveAppRegisterProbe(newEntry.Name)
+	s.ts.RemoveAppRegisterProbe(newEntry)
 
 	rw.WriteHeader(http.StatusNoContent)
 }

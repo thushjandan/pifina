@@ -3,6 +3,7 @@
     import { endpointAddress } from "./EndpointStore";
 	import { onDestroy } from 'svelte';
 	import TrafficSelector from "./TrafficSelector.svelte";
+	import AppRegister from "./AppRegister.svelte";
 
     let localEndpointAddress: string = "";
     let urlEndpointAddr: URL | null;
@@ -30,6 +31,7 @@
                 <EndpointInput />
             {:else }
                 <TrafficSelector />
+                <AppRegister />
             {/if}
         </div>
     </div>
