@@ -6,8 +6,10 @@ import (
 
 func (driver *TofinoDriver) createP4TableIndex() {
 	driver.indexP4Tables = make(map[string]int)
+	driver.indexByIdP4Tables = make(map[uint32]int)
 	for i := range driver.P4Tables {
 		driver.indexP4Tables[driver.P4Tables[i].Name] = i
+		driver.indexByIdP4Tables[driver.P4Tables[i].Id] = i
 		// Find the full table name of each probe and cache it
 		for _, probe := range PROBE_TABLES {
 			if strings.Contains(driver.P4Tables[i].Name, probe) {
@@ -44,6 +46,17 @@ func (driver *TofinoDriver) GetTableIdByName(tblName string) uint32 {
 	}
 
 	return tblId
+}
+
+func (driver *TofinoDriver) GetTableNameById(tblId uint32) string {
+	tblName := ""
+	// Find table name in index
+	if sliceIdx, ok := driver.indexByIdP4Tables[tblId]; ok {
+		// Table name has been found in hash table
+		return driver.P4Tables[sliceIdx].Name
+	}
+
+	return tblName
 }
 
 // Find full table name by the short name of the table

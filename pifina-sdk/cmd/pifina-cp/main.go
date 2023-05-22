@@ -23,7 +23,7 @@ func main() {
 	api_port := flag.String("port", ":8656", "Controller API port to listen")
 	version_flag := flag.Bool("version", false, "show version")
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
-	sample_interval := flag.Int("sample-interval-ms", 1000, "Sample interval in ms. Default 100ms")
+	sample_interval := flag.Int("sample-interval-ms", 500, "Sample interval in ms. Default 100ms")
 
 	flag.Parse()
 
