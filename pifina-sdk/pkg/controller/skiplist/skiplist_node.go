@@ -1,4 +1,4 @@
-package bufferpool
+package skiplist
 
 import "github.com/thushjandan/pifina/pkg/model"
 

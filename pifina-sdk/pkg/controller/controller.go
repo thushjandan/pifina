@@ -15,16 +15,16 @@ import (
 )
 
 type TofinoController struct {
-	ctx           context.Context
-	logger        hclog.Logger
-	endpoint      string
-	p4name        string
-	driver        *driver.TofinoDriver
-	collector     *collector.MetricCollector
-	ts            *trafficselector.TrafficSelector
-	sink          *sink.Sink
-	metricStorage *bufferpool.SkipList
-	api           *api.ControllerApiServer
+	ctx       context.Context
+	logger    hclog.Logger
+	endpoint  string
+	p4name    string
+	driver    *driver.TofinoDriver
+	collector *collector.MetricCollector
+	ts        *trafficselector.TrafficSelector
+	sink      *sink.Sink
+	bp        *bufferpool.Bufferpool
+	api       *api.ControllerApiServer
 }
 
 type TofinoControllerOptions struct {
@@ -43,7 +43,8 @@ func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
 	driver := driver.NewTofinoDriver(options.Logger)
 	ts := trafficselector.NewTrafficSelector(options.Logger, driver)
 	collector := collector.NewMetricCollector(options.Logger, driver, options.SampleInterval, ts)
-	apiServer := api.NewControllerApiServer(options.Logger, options.APIPort, ts)
+	bp := bufferpool.NewBufferpool(options.Logger, driver, ts)
+	apiServer := api.NewControllerApiServer(options.Logger, options.APIPort, ts, bp)
 	sink := sink.NewSink(options.Logger, options.CollectorServerEndpoint)
 	return &TofinoController{
 		logger:    options.Logger.Named("controller"),
@@ -53,6 +54,7 @@ func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
 		p4name:    options.P4name,
 		sink:      sink,
 		ts:        ts,
+		bp:        bp,
 		api:       apiServer,
 	}
 }
@@ -70,14 +72,14 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 		return err
 	}
 
-	controller.EnableSyncOperationOnTables()
 	metricDataChannel := make(chan *model.MetricItem, 10)
-	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
 	metricsSinkChannel := make(chan []*model.MetricItem)
 	wg.Add(3)
 	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
-	go controller.StartBufferpoolManager(ctx, wg, metricDataChannel)
-	go controller.StartSampleMetrics(ctx, wg, metricsSinkChannel)
+	go controller.bp.StartBufferpoolManager(ctx, wg, metricDataChannel)
+	go controller.bp.StartSampleMetrics(ctx, wg, metricsSinkChannel)
+	// Start collector threads
+	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
 	// Start API server in a thread. No need for waitgroup
 	go controller.api.StartWebServer(ctx)
 	// Block until a kill signal

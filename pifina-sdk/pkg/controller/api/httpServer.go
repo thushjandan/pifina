@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/pkg/controller/bufferpool"
 	"github.com/thushjandan/pifina/pkg/controller/trafficselector"
 )
 
@@ -14,12 +15,14 @@ type ControllerApiServer struct {
 	port   string
 	server *http.Server
 	ts     *trafficselector.TrafficSelector
+	bp     *bufferpool.Bufferpool
 }
 
-func NewControllerApiServer(logger hclog.Logger, port string, ts *trafficselector.TrafficSelector) *ControllerApiServer {
+func NewControllerApiServer(logger hclog.Logger, port string, ts *trafficselector.TrafficSelector, bp *bufferpool.Bufferpool) *ControllerApiServer {
 	return &ControllerApiServer{
 		logger: logger.Named("api"),
 		ts:     ts,
+		bp:     bp,
 		port:   port,
 	}
 }

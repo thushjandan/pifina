@@ -1,4 +1,4 @@
-package bufferpool
+package skiplist
 
 import (
 	"errors"

@@ -75,7 +75,10 @@ func (s *ControllerApiServer) deleteAppRegisterProbe(rw http.ResponseWriter, r *
 		return
 	}
 
+	// Remove register from data collection
 	s.ts.RemoveAppRegisterProbe(newEntry)
+	// Remove register from bufferpool
+	s.bp.RemoveMetric(newEntry.Name, newEntry.Index, model.METRIC_EXT_VALUE)
 
 	rw.WriteHeader(http.StatusNoContent)
 }
