@@ -2,7 +2,7 @@
 	import Chart from './Chart.svelte';
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData, MetricItem } from '../lib/models/MetricItem';
-	import { PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE } from '$lib/models/metricNames';
+	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE } from '$lib/models/metricNames';
 	import { onDestroy } from 'svelte';
     export let endpoints: string[];
 
@@ -11,11 +11,17 @@
 	let sessionIds = new Set<number>();
 	let selectedSessionIds: number[] = [];
 	let metricData: MetricData = {};
+	let appRegister = new Set<string>();
 
 	const evtSourceMessage = function(event: MessageEvent) {
 		let dataobj: DTOPifinaMetricItem[] = JSON.parse(event.data);
 		dataobj.forEach(item => {
-			const key = `${item.metricName}${item.type}`;
+			let key = `${item.metricName}${item.type}`;
+			// Check if it's a metric from a default probe
+			if (!PIFINA_DEFAULT_PROBES.includes(key)) {
+				appRegister.add(item.metricName);
+				key = item.metricName;
+			}
 			// check if key exists. If not, create a new list.
 			if (!(key in metricData)) {
 				metricData[key] = [];
@@ -25,6 +31,7 @@
 			}
 			metricData[key].push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId, type: item.type});
 		})
+
 		// Default initialization of filters
 		if (selectedSessionIds.length == 0) {
 			for (const sessionId of sessionIds.values()) {
@@ -33,7 +40,7 @@
 		}
 
 		// Limit series length
-		const metricSizeLimit = (selectedSessionIds.length + 1) * 500;
+		const metricSizeLimit = (selectedSessionIds.length + 1) * 300;
 		for (const mapkey in metricData) {
 			if (metricData[mapkey].length > metricSizeLimit) {
 				metricData[mapkey].splice(0, metricData[mapkey].length - metricSizeLimit);
@@ -179,4 +186,22 @@
 		}} />
 	</div>
 	{/if}
+	{#each [...appRegister.values()] as entry }
+	<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+		<h2>{entry} register (app-owned)</h2>
+		<Chart options={{
+			x: xScaleOptions,
+			y: {
+				label: "current",
+				grid: true
+			},
+			width: cliendScreenWidth,
+			color: {legend: true, type: "categorical"},
+			marks: [
+				Plot.line(metricData[entry], {x: "timestamp", y: "value", stroke: (d) => `${d.sessionId}`, marker: "dot"}),
+				Plot.tickY(metricData[entry], {y: "value", title: (d) => (`current: ${d.value}`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `${d.sessionId}`}),
+			]
+		}} />
+	</div>		
+	{/each}
 </div>
