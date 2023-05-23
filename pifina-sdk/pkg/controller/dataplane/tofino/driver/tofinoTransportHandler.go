@@ -197,7 +197,7 @@ func (driver *TofinoDriver) SendReadRequest(tblEntries []*bfruntime.Entity) ([]*
 		Entities: tblEntries,
 		Target: &bfruntime.TargetDevice{
 			DeviceId:  0,
-			PipeId:    0xffff,
+			PipeId:    TOFINO_PIPE_ID,
 			PrsrId:    255,
 			Direction: 255,
 		},
@@ -224,7 +224,7 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,
 		Target: &bfruntime.TargetDevice{
 			DeviceId:  0,
-			PipeId:    0xffff,
+			PipeId:    TOFINO_PIPE_ID,
 			PrsrId:    255,
 			Direction: 255,
 		},

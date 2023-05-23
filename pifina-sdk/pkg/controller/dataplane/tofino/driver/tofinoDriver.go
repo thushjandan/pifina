@@ -28,6 +28,7 @@ type TofinoDriver struct {
 }
 
 const (
+	TOFINO_PIPE_ID                            = 0xffff // Target specific pipelines. 0xffff => ALL PIPELINES
 	PROBE_INGRESS_MATCH_CNT                   = "PF_INGRESS_MATCH_CNT"
 	PROBE_INGRESS_START_HDR_SIZE              = "PF_INGRESS_START_HDR_SIZE"
 	PROBE_INGRESS_END_HDR_SIZE                = "PF_INGRESS_END_HDR_SIZE"
