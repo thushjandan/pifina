@@ -2,13 +2,14 @@
     import "../app.css";
     import { fade } from 'svelte/transition';
     import { page } from '$app/stores';
+	import { partition } from "d3";
     let path: string;
     let mobileNavOpen = false;
 
     $: path = $page.url.pathname;
 
     const isHome = () => path === '/';
-    const isConfig = () => path ==='/config';
+    const isConfig = () => path.startsWith('/config');
     const isAbout = () => path === '/about';
 
 </script>
