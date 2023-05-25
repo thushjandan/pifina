@@ -34,7 +34,7 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 		return
 	}
 
-	wg.Add(6)
+	wg.Add(7)
 	// Start collector threads
 	go collector.CollectIngressStartMatchCounter(ctx, wg, metricSink)
 	go collector.CollectIngressHdrStartCounter(ctx, wg, metricSink)
@@ -42,6 +42,7 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	go collector.CollectEgressStartCounter(ctx, wg, metricSink)
 	go collector.CollectEgressEndCounter(ctx, wg, metricSink)
 	go collector.CollectAppRegisterValues(ctx, wg, metricSink)
+	go collector.CollectTrafficManagerCounters(ctx, wg, metricSink)
 }
 
 func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {

@@ -16,6 +16,8 @@ type TrafficSelector struct {
 	matchSelectorEntryCache []*model.MatchSelectorEntry
 	appRegisterProbes       []*model.AppRegister
 	appRegisterProbesLock   sync.RWMutex
+	monitoredDevPorts       []string
+	monitoredDevPortsLock   sync.RWMutex
 }
 
 func NewTrafficSelector(logger hclog.Logger, d *driver.TofinoDriver) *TrafficSelector {

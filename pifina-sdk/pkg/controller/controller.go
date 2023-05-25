@@ -68,6 +68,7 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	}
 	// Disconnect from switch after terminating the controller
 	defer controller.driver.Disconnect()
+	err = controller.driver.LoadPortNameCache()
 	if err != nil {
 		return err
 	}

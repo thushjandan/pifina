@@ -45,6 +45,11 @@ func (driver *TofinoDriver) GetTableIdByName(tblName string) uint32 {
 		return driver.P4Tables[sliceIdx].Id
 	}
 
+	if sliceIdx, ok := driver.indexNonP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		return driver.NonP4Tables[sliceIdx].Id
+	}
+
 	return tblId
 }
 
@@ -76,6 +81,15 @@ func (driver *TofinoDriver) GetKeyIdByName(tblName, keyName string) uint32 {
 		for keyIdx := range driver.P4Tables[sliceIdx].Key {
 			if driver.P4Tables[sliceIdx].Key[keyIdx].Name == keyName {
 				return driver.P4Tables[sliceIdx].Key[keyIdx].Id
+			}
+		}
+	}
+
+	if sliceIdx, ok := driver.indexNonP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		for keyIdx := range driver.NonP4Tables[sliceIdx].Key {
+			if driver.NonP4Tables[sliceIdx].Key[keyIdx].Name == keyName {
+				return driver.NonP4Tables[sliceIdx].Key[keyIdx].Id
 			}
 		}
 	}
@@ -161,6 +175,31 @@ func (driver *TofinoDriver) GetSingletonDataIdByName(tblName, dataName string) u
 		}
 	}
 	return dataId
+}
+
+func (driver *TofinoDriver) GetSingletonDataNameById(tblName string, dataId uint32) string {
+	dataName := ""
+	// Find table name in index
+	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		for dataIdx := range driver.P4Tables[sliceIdx].Data {
+			dataObj := driver.P4Tables[sliceIdx].Data[dataIdx]
+			if dataObj.Singleton.Id == dataId {
+				return dataObj.Singleton.Name
+			}
+		}
+	}
+	// Find table name in index
+	if sliceIdx, ok := driver.indexNonP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		for dataIdx := range driver.NonP4Tables[sliceIdx].Data {
+			dataObj := driver.NonP4Tables[sliceIdx].Data[dataIdx]
+			if dataObj.Singleton.Id == dataId {
+				return dataObj.Singleton.Name
+			}
+		}
+	}
+	return dataName
 }
 
 func (driver *TofinoDriver) GetSingletonDataIdLikeName(tblName, shortDataName string) uint32 {

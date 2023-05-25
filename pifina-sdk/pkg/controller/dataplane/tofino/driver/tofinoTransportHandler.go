@@ -191,13 +191,17 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 
 // Low Level read request handler
 func (driver *TofinoDriver) SendReadRequest(tblEntries []*bfruntime.Entity) ([]*bfruntime.Entity, error) {
+	return driver.SendReadRequestByPipeId(tblEntries, TOFINO_PIPE_ID)
+}
+
+func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Entity, pipeId int) ([]*bfruntime.Entity, error) {
 
 	readReq := &bfruntime.ReadRequest{
 		ClientId: driver.clientId,
 		Entities: tblEntries,
 		Target: &bfruntime.TargetDevice{
 			DeviceId:  0,
-			PipeId:    TOFINO_PIPE_ID,
+			PipeId:    uint32(pipeId),
 			PrsrId:    255,
 			Direction: 255,
 		},

@@ -34,6 +34,8 @@ func (s *ControllerApiServer) StartWebServer(ctx context.Context) {
 	mux.Handle("/api/v1/schema", middlewareCORS(http.HandlerFunc(s.GetSelectorSchema)))
 	mux.Handle("/api/v1/app-registers", middlewareCORS(http.HandlerFunc(s.HandleAppRegisterReq)))
 	mux.Handle("/api/v1/app-registers/available", middlewareCORS(http.HandlerFunc(s.GetAllAppRegisterNames)))
+	mux.Handle("/api/v1/ports", middlewareCORS(http.HandlerFunc(s.HandlePortsToMonitor)))
+	mux.Handle("/api/v1/ports/available", middlewareCORS(http.HandlerFunc(s.GetAllAvailablePorts)))
 
 	s.server = &http.Server{
 		Addr:    s.port,

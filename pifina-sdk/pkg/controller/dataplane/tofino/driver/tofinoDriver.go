@@ -41,6 +41,11 @@ const (
 	COUNTER_SPEC_BYTES                        = "$COUNTER_SPEC_BYTES"
 	COUNTER_SPEC_PKTS                         = "$COUNTER_SPEC_PKTS"
 	TABLE_TYPE_REGISTER                       = "Register"
+	TABLE_NAME_PORT_INFO                      = "$PORT_STR_INFO"
+	TABLE_NAME_TM_CNT_IG                      = "tf2.tm.counter.ig_port"
+	TABLE_NAME_TM_CNT_EG                      = "tf2.tm.counter.eg_port"
+	TABLE_NAME_TM_CNT_PIPE                    = "tf2.tm.counter.pipe"
+	DEV_PORT_KEY_NAME                         = "dev_port"
 )
 
 var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT}
