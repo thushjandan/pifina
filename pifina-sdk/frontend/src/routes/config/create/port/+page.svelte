@@ -42,7 +42,7 @@
             loading = false;
             if (data.ok) {
                 createDone = true;
-                setInterval(() => goto('/config'), 500);
+                goto('/config');
             } else {
                 data.json().then(data => createErrorMsg = data.message);
             }

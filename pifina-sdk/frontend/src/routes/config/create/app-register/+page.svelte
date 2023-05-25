@@ -3,7 +3,6 @@
 	import { onDestroy } from "svelte";
 	import { endpointAddress } from "../../EndpointStore";
 	import { goto } from "$app/navigation";
-	import Modal from "$lib/components/Modal.svelte";
 	import { fade } from "svelte/transition";
 
     let localEndpointAddress: URL;
@@ -13,8 +12,6 @@
     let createDone = false;
     let createErrorMsg = "";
     let showModal = false;
-    let closeModal: (() => void);
-
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
         let url: URL;
@@ -43,7 +40,7 @@
             loading = false;
             if (data.ok) {
                 createDone = true;
-                setInterval(() => goto('/config'), 500);
+                goto('/config');
             } else {
                 data.json().then(data => createErrorMsg = data.message);
             }

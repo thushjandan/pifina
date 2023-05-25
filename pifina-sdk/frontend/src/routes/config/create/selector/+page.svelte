@@ -2,7 +2,6 @@
 	import { onDestroy } from "svelte";
 	import { endpointAddress } from "../../EndpointStore";
 	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/SelectorSchema";
-	import { filter, selector } from "d3";
 	import { goto } from "$app/navigation";
 	import type { SelectorEntry } from "$lib/models/SelectorEntry";
 
@@ -62,7 +61,7 @@
             createLoading = false;
             if (data.ok) {
                 createDone = true;
-                setInterval(() => goto('/config'), 500);
+                goto('/config');
             } else {
                 data.json().then(data => createErrorMsg = data.message);
             }
