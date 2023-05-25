@@ -4,6 +4,7 @@
 	import { onDestroy } from 'svelte';
 	import TrafficSelector from "./TrafficSelector.svelte";
 	import AppRegister from "./AppRegister.svelte";
+	import DevPortList from "./DevPortList.svelte";
 
     let localEndpointAddress: string = "";
     let urlEndpointAddr: URL | null;
@@ -32,6 +33,7 @@
             {:else }
                 <TrafficSelector />
                 <AppRegister />
+                <DevPortList />
             {/if}
         </div>
     </div>

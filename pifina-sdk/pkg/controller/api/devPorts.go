@@ -10,7 +10,7 @@ import (
 
 func (s *ControllerApiServer) GetAllAvailablePorts(rw http.ResponseWriter, r *http.Request) {
 	ports := s.ts.GetAllAvailablePorts()
-	sort.Strings(ports)
+	sort.Slice(ports, func(i, j int) bool { return ports[i].Name < ports[j].Name })
 	json.NewEncoder(rw).Encode(ports)
 	rw.WriteHeader(http.StatusOK)
 }
@@ -29,7 +29,11 @@ func (s *ControllerApiServer) HandlePortsToMonitor(rw http.ResponseWriter, r *ht
 func (s *ControllerApiServer) GetMonitoredPorts(rw http.ResponseWriter, r *http.Request) {
 	ports := s.ts.GetMonitoredPorts()
 	sort.Strings(ports)
-	json.NewEncoder(rw).Encode(ports)
+	transformedPorts := make([]*model.DevPort, 0, len(ports))
+	for i := range ports {
+		transformedPorts = append(transformedPorts, &model.DevPort{Name: ports[i]})
+	}
+	json.NewEncoder(rw).Encode(transformedPorts)
 	rw.WriteHeader(http.StatusOK)
 }
 
@@ -44,5 +48,7 @@ func (s *ControllerApiServer) DeleteMonitoredPort(rw http.ResponseWriter, r *htt
 	var devPort *model.DevPort
 	json.NewDecoder(r.Body).Decode(&devPort)
 	s.ts.RemovePortToMonitor(devPort.Name)
+	//TODO Delete from buffer pool
+	//s.bp.RemoveMetric(devPort.Name, newEntry.Index, model.METRIC_EXT_VALUE)
 	rw.WriteHeader(http.StatusNoContent)
 }

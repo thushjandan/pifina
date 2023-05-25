@@ -20,10 +20,10 @@ func (driver *TofinoDriver) GetPortIdByName(portName string) ([]byte, error) {
 }
 
 // Get all port names from the port cache
-func (driver *TofinoDriver) GetAvailablePortNames() []string {
-	portNames := make([]string, 0)
+func (driver *TofinoDriver) GetAvailablePortNames() []*model.DevPort {
+	portNames := make([]*model.DevPort, 0)
 	for key := range driver.portCache {
-		portNames = append(portNames, key)
+		portNames = append(portNames, &model.DevPort{Name: key, PortId: binary.BigEndian.Uint32(driver.portCache[key])})
 	}
 	return portNames
 }
@@ -165,7 +165,7 @@ func (driver *TofinoDriver) GetTMCountersByPort(ports []string) ([]*model.Metric
 				SessionId:   decodedPortId,
 				Value:       uint64(decodedValue),
 				Type:        model.METRIC_EXT_VALUE,
-				MetricName:  fmt.Sprintf("%s_%s", shortTblName, dataFieldName),
+				MetricName:  fmt.Sprintf("PF_TM_%s_%s", shortTblName, dataFieldName),
 				LastUpdated: timeNow,
 			}
 			transformedMetrics = append(transformedMetrics, newMetric)
@@ -215,7 +215,7 @@ func (driver *TofinoDriver) GetTMPipelineCounter() ([]*model.MetricItem, error) 
 					SessionId:   uint32(pipe_id),
 					Value:       uint64(decodedValue),
 					Type:        model.METRIC_EXT_VALUE,
-					MetricName:  fmt.Sprintf("%s_%s", shortTblName, dataFieldName),
+					MetricName:  fmt.Sprintf("PF_TM_%s_%s", shortTblName, dataFieldName),
 					LastUpdated: timeNow,
 				}
 				transformedMetrics = append(transformedMetrics, newMetric)

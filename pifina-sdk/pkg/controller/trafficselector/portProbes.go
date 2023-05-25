@@ -1,6 +1,8 @@
 package trafficselector
 
-func (ts *TrafficSelector) GetAllAvailablePorts() []string {
+import "github.com/thushjandan/pifina/pkg/model"
+
+func (ts *TrafficSelector) GetAllAvailablePorts() []*model.DevPort {
 	return ts.driver.GetAvailablePortNames()
 }
 

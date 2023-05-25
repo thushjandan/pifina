@@ -2,8 +2,10 @@
 	import Chart from './Chart.svelte';
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData, MetricItem } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE } from '$lib/models/metricNames';
+	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS } from '$lib/models/metricNames';
 	import { onDestroy } from 'svelte';
+	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
+	import { select } from 'd3';
     export let endpoints: string[];
 
 	let cliendScreenWidth;
@@ -12,21 +14,28 @@
 	let selectedSessionIds: number[] = [];
 	let metricData: MetricData = {};
 	let appRegister = new Set<string>();
+	let tmMetrics = new Set<string>();
+	let devPorts = new Set<string>();
+	let selectedChartCategory = ChartMenuCategoryModel.MAIN_CHARTS;
 
 	const evtSourceMessage = function(event: MessageEvent) {
 		let dataobj: DTOPifinaMetricItem[] = JSON.parse(event.data);
 		dataobj.forEach(item => {
 			let key = `${item.metricName}${item.type}`;
 			// Check if it's a metric from a default probe
-			if (!PIFINA_DEFAULT_PROBES.includes(key)) {
+			if (!PIFINA_DEFAULT_PROBES.includes(key) && !item.metricName.startsWith("PF_TM_")) {
 				appRegister.add(item.metricName);
+				key = item.metricName;
+			}
+			if (item.metricName.startsWith("PF_TM_")) {
+				tmMetrics.add(item.metricName)
 				key = item.metricName;
 			}
 			// check if key exists. If not, create a new list.
 			if (!(key in metricData)) {
 				metricData[key] = [];
 			}
-			if (!sessionIds.has(item.sessionId)) {
+			if (!sessionIds.has(item.sessionId) && !item.metricName.startsWith("PF_TM_")) {
 				sessionIds.add(item.sessionId);
 			}
 			metricData[key].push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId, type: item.type});
@@ -64,6 +73,9 @@
 		evtSource.onmessage = evtSourceMessage;
 	}
 
+	const isMainChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.MAIN_CHARTS;
+	const isTMChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.TM_CHARTS;
+
 	const xScaleOptions: Plot.ScaleOptions = {
 		label: "Timestamp",
 		tickFormat: (value, _) => (value.toLocaleString(undefined, {
@@ -91,6 +103,23 @@
 		</div>
 	</div>
 </div>
+{#key selectedChartCategory}
+<div class="mt-6 text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700">
+    <ul class="flex flex-wrap -mb-px">
+        <li class="mr-2">
+            <a href={null} on:click={() => selectedChartCategory = ChartMenuCategoryModel.MAIN_CHARTS} class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" class:border-transparent={!isMainChartSelected()} class:text-indigo-600={isMainChartSelected()} 
+				class:border-blue-600={isMainChartSelected()} class:hover:text-gray-600={!isMainChartSelected()} class:hover:border-gray-300={!isMainChartSelected()}>
+				Default Probes
+			</a>
+        </li>
+        <li class="mr-2">
+            <a href={null} on:click={() => selectedChartCategory = ChartMenuCategoryModel.TM_CHARTS} class="inline-block p-4 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300" class:border-transparent={!isTMChartSelected()} class:text-indigo-600={isTMChartSelected()} 
+				class:border-blue-600={isTMChartSelected()} class:hover:text-gray-600={!isTMChartSelected()} class:hover:border-gray-300={!isTMChartSelected()}>
+				Traffic Manager</a>
+        </li>
+    </ul>
+</div>
+{#if isMainChartSelected() == true }
 <div class="divide-y divide-solid">
 	{#if PROBE_INGRESS_MATCH_CNT_BYTE in metricData }
 	<div class="mt-8">
@@ -118,7 +147,7 @@
 			color: {legend: true, type: "categorical"},
 			marks: [
 				Plot.line(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: "sessionId", marker: "dot"}),
-				Plot.tickY(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: "white"})
+				Plot.tickY(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", x: "timestamp", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: "white"})
 			]
 		}} />
 	</div>
@@ -205,3 +234,47 @@
 	</div>		
 	{/each}
 </div>
+{/if}
+{#if isTMChartSelected() == true }
+<div class="divide-y divide-solid">
+	<div class="mt-8">
+		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+			<h2>Ingress & egress packet drops from TM perspective</h2>
+			<Chart options={{
+				x: xScaleOptions,
+				y: {
+					label: "pkts",
+					grid: true
+				},
+				width: cliendScreenWidth,
+				color: {legend: true, type: "categorical"},
+				marks: [
+					Plot.line(metricData[PROBE_TM_INGRESS_DROP_PKT], {x: "timestamp", y: "value", stroke: (d) => `ingress: ${d.sessionId}`, marker: "dot"}),
+					Plot.line(metricData[PROBE_TM_EGRESS_DROP_PKT], {x: "timestamp", y: "value", stroke: (d) => `egress: ${d.sessionId}`, marker: "dot"}),
+					Plot.tickY(metricData[PROBE_TM_INGRESS_DROP_PKT], {y: "value", title: (d) => (`${d.value} pkts`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `ingress: ${d.sessionId}`}),
+					Plot.tickY(metricData[PROBE_TM_EGRESS_DROP_PKT], {y: "value", title: (d) => (`${d.value} pkts`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `egress: ${d.sessionId}`})
+				]
+			}} />
+		</div>
+		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+			<h2>Port usage count in terms of number of memory cells usage from TM ingress & egress perspective</h2>
+			<Chart options={{
+				x: xScaleOptions,
+				y: {
+					label: "pkts",
+					grid: true
+				},
+				width: cliendScreenWidth,
+				color: {legend: true, type: "categorical"},
+				marks: [
+					Plot.line(metricData[PROBE_TM_INRESS_USAGE_CELLS], {x: "timestamp", y: "value", stroke: (d) => `ingress: ${d.sessionId}`, marker: "dot"}),
+					Plot.line(metricData[PROBE_TM_ERESS_USAGE_CELLS], {x: "timestamp", y: "value", stroke: (d) => `egress: ${d.sessionId}`, marker: "dot"}),
+					Plot.tickY(metricData[PROBE_TM_INRESS_USAGE_CELLS], {y: "value", title: (d) => (`${d.value} pkts`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `ingress: ${d.sessionId}`}),
+					Plot.tickY(metricData[PROBE_TM_ERESS_USAGE_CELLS], {y: "value", title: (d) => (`${d.value} pkts`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `egress: ${d.sessionId}`})
+				]
+			}} />
+		</div>
+	</div>
+</div>
+{/if}
+{/key}
