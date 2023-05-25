@@ -7,12 +7,6 @@ build*/
 # Logs folders
 logs/
 
-# Compiled JSON
-*.json
-!*p4app.json
-!topology.json
-!*-runtime.json
-
 *.pcap
 
 bfruntime*pb.go
