@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AppRegisterModal } from "$lib/models/AppRegister";
+	import type { AppRegisterModel } from "$lib/models/AppRegister";
 	import { onDestroy } from "svelte";
 	import { endpointAddress } from "../../EndpointStore";
 	import { goto } from "$app/navigation";
@@ -7,7 +7,7 @@
 	import { fade } from "svelte/transition";
 
     let localEndpointAddress: URL;
-    let newEntry: AppRegisterModal = {index: 0, name: ""} as AppRegisterModal;
+    let newEntry: AppRegisterModel = {index: 0, name: ""} as AppRegisterModel;
     let availableRegPromise: Promise<string[]>;
     let loading= false;
     let createDone = false;

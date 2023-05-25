@@ -3,12 +3,12 @@
 	import { onDestroy } from "svelte";
 	import { endpointAddress } from "./EndpointStore";
 	import { goto } from "$app/navigation";
-	import type { AppRegisterModal } from "$lib/models/AppRegister";
+	import type { AppRegisterModel } from "$lib/models/AppRegister";
 
     let localEndpointAddress: URL;
-    let appRegPromise: Promise<AppRegisterModal[]>;
+    let appRegPromise: Promise<AppRegisterModel[]>;
     let showModal = false;
-    let targetAppRegisterToDelete: AppRegisterModal;
+    let targetAppRegisterToDelete: AppRegisterModel;
     let loading = false;
     let closeModal: (() => void);
 
@@ -29,7 +29,7 @@
         appRegPromise = fetch(`${localEndpointAddress.href}`).then(response => response.json());
     }
 
-    function showConfirmModal(entry: AppRegisterModal) {
+    function showConfirmModal(entry: AppRegisterModel) {
         targetAppRegisterToDelete = entry;
         showModal = true;
     }
