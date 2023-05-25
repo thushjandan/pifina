@@ -5,6 +5,7 @@ SELF_SIGNED_TLS_CERTS=assets/cert.pem
 build: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO) $(SELF_SIGNED_TLS_CERTS)
 	mkdir -p builds
 	go build -o builds/pifina-cp cmd/pifina-cp/main.go
+	go build -o builds/pifina-web cmd/pifina-web/main.go
 	go build -o builds/pifina-cli cmd/pifina-cli/main.go
 
 run: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO)
