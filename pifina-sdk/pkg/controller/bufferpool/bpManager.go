@@ -81,7 +81,7 @@ func (bp *Bufferpool) RemoveMetric(key string, subKey uint32, metricType string)
 func (bp *Bufferpool) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup, c chan []*model.MetricItem) {
 	defer wg.Done()
 
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	for {

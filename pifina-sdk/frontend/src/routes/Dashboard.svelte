@@ -49,7 +49,7 @@
 		}
 
 		// Limit series length
-		const metricSizeLimit = (selectedSessionIds.length + 1) * 300;
+		const metricSizeLimit = (selectedSessionIds.length + 1) * 50;
 		for (const mapkey in metricData) {
 			if (metricData[mapkey].length > metricSizeLimit) {
 				metricData[mapkey].splice(0, metricData[mapkey].length - metricSizeLimit);
@@ -147,7 +147,8 @@
 			color: {legend: true, type: "categorical"},
 			marks: [
 				Plot.line(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: "sessionId", marker: "dot"}),
-				Plot.tickY(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", x: "timestamp", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: "white"})
+				//Plot.tickY(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: "white", tick: true})
+				Plot.tip(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], Plot.pointerX({x: "timestamp", y: "value"}))
 			]
 		}} />
 	</div>
@@ -237,6 +238,7 @@
 {/if}
 {#if isTMChartSelected() == true }
 <div class="divide-y divide-solid">
+	{#if PROBE_TM_INGRESS_DROP_PKT in metricData }
 	<div class="mt-8">
 		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
 			<h2>Ingress & egress packet drops from TM perspective</h2>
@@ -275,6 +277,7 @@
 			}} />
 		</div>
 	</div>
+	{/if}
 </div>
 {/if}
 {/key}
