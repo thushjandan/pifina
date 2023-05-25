@@ -10,21 +10,22 @@ import (
 )
 
 type TofinoDriver struct {
-	logger            hclog.Logger
-	isConnected       bool
-	conn              *grpc.ClientConn
-	client            bfruntime.BfRuntimeClient
-	streamChannel     bfruntime.BfRuntime_StreamChannelClient
-	ctx               context.Context
-	cancel            context.CancelFunc
-	clientId          uint32
-	P4Tables          []Table
-	NonP4Tables       []Table
-	indexP4Tables     map[string]int
-	indexByIdP4Tables map[uint32]int
-	indexNonP4Tables  map[string]int
-	portCache         map[string][]byte
-	probeTableMap     map[string]string
+	logger               hclog.Logger
+	isConnected          bool
+	conn                 *grpc.ClientConn
+	client               bfruntime.BfRuntimeClient
+	streamChannel        bfruntime.BfRuntime_StreamChannelClient
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	clientId             uint32
+	P4Tables             []Table
+	NonP4Tables          []Table
+	indexP4Tables        map[string]int
+	indexByIdP4Tables    map[uint32]int
+	indexNonP4Tables     map[string]int
+	indexByIdNonP4Tables map[uint32]int
+	portCache            map[string][]byte
+	probeTableMap        map[string]string
 }
 
 const (

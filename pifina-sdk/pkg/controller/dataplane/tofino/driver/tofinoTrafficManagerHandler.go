@@ -69,7 +69,7 @@ func (driver *TofinoDriver) LoadPortNameCache() error {
 	return nil
 }
 
-// Retrieves register values by a list of appRegister structs, which are used as index.
+// Retrieves ingress and egress port counters from the perspective of TM.
 func (driver *TofinoDriver) GetTMCountersByPort(ports []string) ([]*model.MetricItem, error) {
 	tblEntries := []*bfruntime.Entity{}
 	tblId_ig := driver.GetTableIdByName(TABLE_NAME_TM_CNT_IG)
@@ -169,6 +169,57 @@ func (driver *TofinoDriver) GetTMCountersByPort(ports []string) ([]*model.Metric
 				LastUpdated: timeNow,
 			}
 			transformedMetrics = append(transformedMetrics, newMetric)
+		}
+	}
+
+	return transformedMetrics, nil
+}
+
+// Retrieves register values by a list of appRegister structs, which are used as index.
+func (driver *TofinoDriver) GetTMPipelineCounter() ([]*model.MetricItem, error) {
+	tblEntries := []*bfruntime.Entity{}
+	tblId_pipe := driver.GetTableIdByName(TABLE_NAME_TM_CNT_PIPE)
+	tblEntries = append(tblEntries,
+		&bfruntime.Entity{
+			Entity: &bfruntime.Entity_TableEntry{
+				TableEntry: &bfruntime.TableEntry{
+					TableId: tblId_pipe,
+				},
+			},
+		},
+	)
+
+	// Transform response
+	transformedMetrics := make([]*model.MetricItem, 0)
+	timeNow := time.Now()
+	for pipe_id := 0; pipe_id < 1; pipe_id++ {
+		// Send read request to switch.
+		entities, err := driver.SendReadRequestByPipeId(tblEntries, pipe_id)
+		if err != nil {
+			return nil, err
+		}
+		for i := range entities {
+			tblEntry := entities[i].GetTableEntry()
+			dataEntries := tblEntry.GetData().GetFields()
+			for data_i := range dataEntries {
+				// Dataplane could return just a single byte instead of 4 bytes.
+				// So we copy the response in a 4 byte slice.
+				rawValue := dataEntries[data_i].GetStream()
+
+				decodedValue := binary.BigEndian.Uint64(rawValue)
+				tblName := driver.GetTableNameById(tblEntry.GetTableId())
+				dataFieldName := driver.GetSingletonDataNameById(tblName, dataEntries[data_i].FieldId)
+				tblNameSplit := strings.Split(tblName, ".")
+				shortTblName := tblNameSplit[len(tblNameSplit)-1]
+				newMetric := &model.MetricItem{
+					SessionId:   uint32(pipe_id),
+					Value:       uint64(decodedValue),
+					Type:        model.METRIC_EXT_VALUE,
+					MetricName:  fmt.Sprintf("%s_%s", shortTblName, dataFieldName),
+					LastUpdated: timeNow,
+				}
+				transformedMetrics = append(transformedMetrics, newMetric)
+			}
 		}
 	}
 

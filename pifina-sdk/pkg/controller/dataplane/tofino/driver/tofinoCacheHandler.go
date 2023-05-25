@@ -22,8 +22,10 @@ func (driver *TofinoDriver) createP4TableIndex() {
 
 func (driver *TofinoDriver) createNonP4TableIndex() {
 	driver.indexNonP4Tables = make(map[string]int)
+	driver.indexByIdNonP4Tables = make(map[uint32]int)
 	for i := range driver.NonP4Tables {
 		driver.indexNonP4Tables[driver.NonP4Tables[i].Name] = i
+		driver.indexByIdNonP4Tables[driver.NonP4Tables[i].Id] = i
 	}
 }
 
@@ -59,6 +61,12 @@ func (driver *TofinoDriver) GetTableNameById(tblId uint32) string {
 	if sliceIdx, ok := driver.indexByIdP4Tables[tblId]; ok {
 		// Table name has been found in hash table
 		return driver.P4Tables[sliceIdx].Name
+	}
+
+	// Find table name in index
+	if sliceIdx, ok := driver.indexByIdNonP4Tables[tblId]; ok {
+		// Table name has been found in hash table
+		return driver.NonP4Tables[sliceIdx].Name
 	}
 
 	return tblName

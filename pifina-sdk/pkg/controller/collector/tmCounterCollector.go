@@ -22,16 +22,16 @@ func (c *MetricCollector) CollectTrafficManagerCounters(ctx context.Context, wg 
 			if len(monitoredPorts) > 0 {
 				metrics, err := c.driver.GetTMCountersByPort(monitoredPorts)
 				if err != nil {
-					c.logger.Error("Error occured during collection of application owned registers", "err", err)
+					c.logger.Error("Error occured during collection of traffic manager port based counters", "err", err)
 				} else {
-					c.logger.Trace("Collection of application owned registers has succeeded.")
+					c.logger.Trace("Collection of traffic manager counters has succeeded.")
 					for i := range metrics {
 						metricSink <- metrics[i]
 					}
 				}
 			}
 		case <-ctx.Done():
-			c.logger.Info("Stopping application owned register collector...")
+			c.logger.Info("Stopping traffic manager counter collector...")
 			return
 		}
 	}
