@@ -97,14 +97,21 @@ func (sl *SkipList) GetAllAndReset() []*model.MetricItem {
 
 	allItems := make([]*model.MetricItem, 0, sl.length)
 	timeNow := time.Now()
+	// Older than 5 sec
+	agedTime := timeNow.Add(-5 * time.Second)
 
 	for nextNode != nil {
 		// Copy metric struct
 		newItem := *(nextNode.value)
+		// Cleanup if required
+		if nextNode.value.LastUpdated.Before(agedTime) {
+			sl.Remove(nextNode.value.MetricName, nextNode.value.SessionId, nextNode.value.Type)
+		}
 		// Reset values
 		if nextNode.value.Type != model.METRIC_EXT_VALUE {
 			nextNode.value.Value = 0
 		}
+
 		// Sampling time
 		newItem.LastUpdated = timeNow
 		allItems = append(allItems, &newItem)

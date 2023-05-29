@@ -21,15 +21,15 @@ func (s *ControllerApiServer) HandleAppRegisterReq(rw http.ResponseWriter, r *ht
 // Returns configured app registers to monitor
 func (s *ControllerApiServer) getAppRegisterProbes(rw http.ResponseWriter, r *http.Request) {
 	registers := s.ts.GetAppRegisterProbes()
-	json.NewEncoder(rw).Encode(registers)
 	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(registers)
 }
 
 // Returns the names all existing Registers
 func (s *ControllerApiServer) GetAllAppRegisterNames(rw http.ResponseWriter, r *http.Request) {
 	registers := s.ts.GetAllAppRegistersOnDevice()
-	json.NewEncoder(rw).Encode(registers)
 	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(registers)
 }
 
 func (s *ControllerApiServer) createAppRegisterProbe(rw http.ResponseWriter, r *http.Request) {

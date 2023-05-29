@@ -59,7 +59,7 @@ func (t *TrafficSelector) AddTrafficSelectorRule(newSelectorRule *model.MatchSel
 	if err != nil {
 		return err
 	}
-	t.logger.Info("A new entry has been added in the dataplane", "sessionId", newSelectorRule)
+	t.logger.Info("A new entry has been added in the dataplane", "sessionId", newSelectorRule.SessionId)
 	// Refresh match selector cache
 	err = t.LoadSessionsFromDevice()
 	return err
@@ -72,7 +72,7 @@ func (t *TrafficSelector) RemoveTrafficSelectorRule(selectorRule *model.MatchSel
 	if err != nil {
 		return err
 	}
-	t.logger.Info("Selector rule has been successfully removed", "rule", selectorRule)
+	t.logger.Info("Selector rule has been successfully removed", "rule", selectorRule.SessionId)
 	// Refresh match selector cache
 	err = t.LoadSessionsFromDevice()
 	return err

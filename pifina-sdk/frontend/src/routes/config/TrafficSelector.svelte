@@ -81,6 +81,7 @@
     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
         <thead class="text-xs text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
+                <th scope="col" class="px-6 py-3">Session ID</th>
                 {#each matchSelectorSchema as entry (entry.id)}
                 {#if entry.matchType == MATCH_TYPE_LPM }
                 <th scope="col" class="px-6 py-3 border-l dark:border-gray-700">{entry.name} - ({entry.matchType})</th>
@@ -97,7 +98,8 @@
         </thead>
         <tbody>
             {#each data as entry }
-            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700"> 
+            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                <td class="px-6 py-4 font-bold bg-slate-100">{entry.sessionId}</td>
                 {#each entry.keys.filter(elem => matchSelectorSchema.find(key => key.id == elem.fieldId)) as selectorKey (selectorKey.fieldId) }
                 {@const schemaItem = matchSelectorSchema.find(elem => selectorKey.fieldId == elem.id)}
                 {#if schemaItem?.matchType == MATCH_TYPE_LPM}

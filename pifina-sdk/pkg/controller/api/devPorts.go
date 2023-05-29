@@ -11,8 +11,8 @@ import (
 func (s *ControllerApiServer) GetAllAvailablePorts(rw http.ResponseWriter, r *http.Request) {
 	ports := s.ts.GetAllAvailablePorts()
 	sort.Slice(ports, func(i, j int) bool { return ports[i].Name < ports[j].Name })
-	json.NewEncoder(rw).Encode(ports)
 	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(ports)
 }
 
 func (s *ControllerApiServer) HandlePortsToMonitor(rw http.ResponseWriter, r *http.Request) {
@@ -33,8 +33,8 @@ func (s *ControllerApiServer) GetMonitoredPorts(rw http.ResponseWriter, r *http.
 	for i := range ports {
 		transformedPorts = append(transformedPorts, &model.DevPort{Name: ports[i]})
 	}
-	json.NewEncoder(rw).Encode(transformedPorts)
 	rw.WriteHeader(http.StatusOK)
+	json.NewEncoder(rw).Encode(transformedPorts)
 }
 
 func (s *ControllerApiServer) AddPortToMonitor(rw http.ResponseWriter, r *http.Request) {
