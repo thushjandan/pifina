@@ -207,6 +207,9 @@ func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Enti
 		},
 	}
 
+	if !driver.isConnected {
+		return nil, &model.ErrNotReady{Msg: "Not connected to Tofino"}
+	}
 	// Send read request
 	readClient, err := driver.client.Read(driver.ctx, readReq)
 	if err != nil {
@@ -235,10 +238,13 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 		Updates: updateItems,
 	}
 
-	_, err := driver.client.Write(driver.ctx, &writeReq)
-	if err != nil {
-		return err
+	if driver.isConnected {
+		_, err := driver.client.Write(driver.ctx, &writeReq)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
