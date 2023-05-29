@@ -30,6 +30,15 @@ func (c *MetricCollector) CollectTrafficManagerCounters(ctx context.Context, wg 
 					}
 				}
 			}
+			metrics, err := c.driver.GetTMPipelineCounter()
+			if err != nil {
+				c.logger.Error("Error occured during collection of traffic manager pipeline based counters", "err", err)
+			} else {
+				c.logger.Trace("Collection of traffic manager counters has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
+			}
 		case <-ctx.Done():
 			c.logger.Info("Stopping traffic manager counter collector...")
 			return

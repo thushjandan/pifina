@@ -2,7 +2,7 @@
 	import Chart from './Chart.svelte';
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData, MetricItem } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS } from '$lib/models/metricNames';
+	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS, PROBE_TM_PIPE_EG_DROP_PKT, PROBE_TM_PIPE_IG_FULL_BUF, PROBE_TM_PIPE_TOTAL_BUF_DROP } from '$lib/models/metricNames';
 	import { onDestroy } from 'svelte';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
 	import { select } from 'd3';
@@ -12,6 +12,7 @@
     let selectedEndpoint: string = endpoints[0];
 	let sessionIds = new Set<number>();
 	let selectedSessionIds: number[] = [];
+	let sessionIdFilterIsDirty = false;
 	let metricData: MetricData = {};
 	let appRegister = new Set<string>();
 	let tmMetrics = new Set<string>();
@@ -42,15 +43,19 @@
 		})
 
 		// Default initialization of filters
-		if (selectedSessionIds.length == 0) {
+		if (!sessionIdFilterIsDirty && selectedSessionIds.length == 0) {
 			for (const sessionId of sessionIds.values()) {
 				selectedSessionIds.push(sessionId);
 			}
 		}
 
 		// Limit series length
-		const metricSizeLimit = (selectedSessionIds.length + 1) * 50;
 		for (const mapkey in metricData) {
+			let mapKeySessioId = new Set<number>();
+			const groupBySessionId = metricData[mapkey].forEach(item => {
+				mapKeySessioId.add(item.sessionId);
+			});
+			const metricSizeLimit = (mapKeySessioId.size + 1) * 20;
 			if (metricData[mapkey].length > metricSizeLimit) {
 				metricData[mapkey].splice(0, metricData[mapkey].length - metricSizeLimit);
 			}
@@ -78,6 +83,7 @@
 
 	const xScaleOptions: Plot.ScaleOptions = {
 		label: "Timestamp",
+		tickSpacing: 150,
 		tickFormat: (value, _) => (value.toLocaleString(undefined, {
 			hour: 'numeric',
 			minute: 'numeric',
@@ -103,7 +109,7 @@
 		</div>
 	</div>
 </div>
-{#key selectedChartCategory}
+{#key selectedChartCategory }
 <div class="mt-6 text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:text-gray-400 dark:border-gray-700">
     <ul class="flex flex-wrap -mb-px">
         <li class="mr-2">
@@ -128,7 +134,7 @@
 			<div class="mt-2 flex flex-row">
 				{#each [...sessionIds.values()] as sessionId}
 						<div class="items-center">
-							<input type=checkbox bind:group={selectedSessionIds} name="sessionIds" value={sessionId} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+							<input type=checkbox bind:group={selectedSessionIds} on:change={() => sessionIdFilterIsDirty = true} name="sessionIds" value={sessionId} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
 							<label for="comments" class="ml-1 mr-4 font-medium text-gray-900">{sessionId}</label>
 						</div>
 				{/each}
@@ -147,8 +153,7 @@
 			color: {legend: true, type: "categorical"},
 			marks: [
 				Plot.line(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: "sessionId", marker: "dot"}),
-				//Plot.tickY(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: "white", tick: true})
-				Plot.tip(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], Plot.pointerX({x: "timestamp", y: "value"}))
+				Plot.tip(metricData[PROBE_INGRESS_MATCH_CNT_BYTE], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
 			]
 		}} />
 	</div>
@@ -167,14 +172,14 @@
 			color: {legend: true, type: "categorical"},
 			marks: [
 				Plot.line(metricData[PROBE_EGRESS_START_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: (d) => `Start: ${d.sessionId}`, marker: "dot"}),
-				Plot.tickY(metricData[PROBE_EGRESS_START_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `Start: ${d.sessionId}`}),
 				Plot.line(metricData[PROBE_EGRESS_END_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: (d) => `End: ${d.sessionId}`, marker: "dot"}),
-				Plot.tickY(metricData[PROBE_EGRESS_END_CNT_BYTE], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), y: "value", title: (d) => (`${d.value} bytes/sec`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `End: ${d.sessionId}`})
+				Plot.tip(metricData[PROBE_EGRESS_START_CNT_BYTE], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, title: (d) => `Start byte counter for session ${d.sessionId}\n\n${d.value} bytes/sec`, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
+				Plot.tip(metricData[PROBE_EGRESS_END_CNT_BYTE], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, title: (d) => `End byte counter for session ${d.sessionId}\n\n${d.value} bytes/sec`, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
 			]
 		}} />
 	</div>
 	{/if}
-	
+
 	{#if PROBE_EGRESS_START_CNT_PKTS in metricData && PROBE_INGRESS_MATCH_CNT_PKT in metricData }
 	<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
 		<h2>Ingress & egress packet counter</h2>
@@ -238,8 +243,8 @@
 {/if}
 {#if isTMChartSelected() == true }
 <div class="divide-y divide-solid">
-	{#if PROBE_TM_INGRESS_DROP_PKT in metricData }
-	<div class="mt-8">
+	<div class="mt-8 grid md:grid-cols-2">
+		{#if PROBE_TM_INGRESS_DROP_PKT in metricData }
 		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
 			<h2>Ingress & egress packet drops from TM perspective</h2>
 			<Chart options={{
@@ -276,8 +281,58 @@
 				]
 			}} />
 		</div>
+		{/if}
+		{#if PROBE_TM_PIPE_TOTAL_BUF_DROP in metricData }
+		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+			<h2>Number of packets which were dropped because of buffer full condition</h2>
+			<Chart options={{
+				x: xScaleOptions,
+				y: {
+					label: "pkts",
+					grid: true
+				},
+				width: cliendScreenWidth,
+				color: {legend: true, type: "categorical"},
+				marks: [
+					Plot.line(metricData[PROBE_TM_PIPE_TOTAL_BUF_DROP], {x: "timestamp", y: "value", stroke: (d) => `pipeline: ${d.sessionId}`,  marker: "dot"}),
+					Plot.tip(metricData[PROBE_TM_PIPE_TOTAL_BUF_DROP], Plot.pointerX({x: "timestamp", y: "value"})),
+				]
+			}} />
+		</div>
+		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+			<h2>The number of packets which were dropped because of buffer full condition on ingress side</h2>
+			<Chart options={{
+				x: xScaleOptions,
+				y: {
+					label: "pkts",
+					grid: true
+				},
+				width: cliendScreenWidth,
+				color: {legend: true, type: "categorical"},
+				marks: [
+					Plot.line(metricData[PROBE_TM_PIPE_IG_FULL_BUF], {x: "timestamp", y: "value", stroke: (d) => `pipeline: ${d.sessionId}`, marker: "dot"}),
+					Plot.tip(metricData[PROBE_TM_PIPE_IG_FULL_BUF], Plot.pointerX({x: "timestamp", y: "value"})),
+				]
+			}} />
+		</div>
+		<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+			<h2>The total number of packets which were dropped on egress side.</h2>
+			<Chart options={{
+				x: xScaleOptions,
+				y: {
+					label: "pkts",
+					grid: true
+				},
+				width: cliendScreenWidth,
+				color: {legend: true, type: "categorical"},
+				marks: [
+					Plot.line(metricData[PROBE_TM_PIPE_EG_DROP_PKT], {x: "timestamp", y: "value", stroke: (d) => `pipeline: ${d.sessionId}`, marker: "dot"}),
+					Plot.tip(metricData[PROBE_TM_PIPE_EG_DROP_PKT], Plot.pointerX({x: "timestamp", y: "value"}))
+				]
+			}} />
+		</div>
+		{/if}
 	</div>
-	{/if}
 </div>
 {/if}
 {/key}

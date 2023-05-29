@@ -11,6 +11,9 @@ export const PROBE_TM_INGRESS_DROP_PKT = `PF_TM_ig_port_drop_count_packets`;
 export const PROBE_TM_EGRESS_DROP_PKT = `PF_TM_eg_port_drop_count_packets`;
 export const PROBE_TM_INRESS_USAGE_CELLS = `PF_TM_ig_port_usage_cells`;
 export const PROBE_TM_ERESS_USAGE_CELLS = `PF_TM_eg_port_usage_cells`;
+export const PROBE_TM_PIPE_TOTAL_BUF_DROP = `PF_TM_pipe_total_buffer_full_drop_packets`;
+export const PROBE_TM_PIPE_IG_FULL_BUF = `PF_TM_pipe_ig_buf_full_drop_packets`;
+export const PROBE_TM_PIPE_EG_DROP_PKT = `PF_TM_pipe_eg_total_drop_packets`;
 
 export const PIFINA_DEFAULT_PROBES = [
     PROBE_INGRESS_MATCH_CNT_BYTE,
