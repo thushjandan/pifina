@@ -1,8 +1,27 @@
 /* -*- P4_16 -*- */
+/**
+* PIFINA demo application
+*
+* Copyright 2023 Thushjandan Ponnudurai
+
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 #include <core.p4>
 /* TOFINO Native architecture */
 #include <t2na.p4>
 
+// PIFINA: Step 1: Include header files
 #include "include/pifina_headers.p4"
 
 const bit<16> TYPE_IPV4 = 0x800;
@@ -64,6 +83,7 @@ struct egress_metadata_t {
     pf_egress_metadata_t pf_meta;
 }
 
+// PIFINA: Step 2: Include PIFINA functions
 #include "include/pifina_probes.p4"
 
 /*************************************************************************
@@ -80,9 +100,8 @@ parser SwitchIngressParser(packet_in packet,
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
 
-        meta.pf_meta.pfIsMatch = false;
-        meta.pf_meta.pfSessionId = 0;
-        meta.pf_meta.pfOrigHdrLength = 0;
+        // PIFINA: Step 3. Call pifina_ingress_parser with pf_meta as parameter 
+        pifina_parser(meta.pf_meta);
 
         transition parse_ethernet;
     }
@@ -108,22 +127,16 @@ parser SwitchEgressParser(packet_in packet,
                 out egress_metadata_t meta,
                 out egress_intrinsic_metadata_t eg_intr_md) {
 
-    pf_control_t pfControlHeader;
+    // PIFINA: Step 4: Initialize Pifina Egress Parser
+    PifinaEgressParser() pifina_egress_parser;
 
     state start {
         /* TNA-specific Code for simple cases */
         packet.extract(eg_intr_md);
 
-        transition parse_pfControl;
-    }
-
-    state parse_pfControl {
-        packet.extract(pfControlHeader);
-
-        meta.pf_meta.pfIsMatch = pfControlHeader.pfIsMatch;
-        meta.pf_meta.pfSessionId = pfControlHeader.pfSessionId;
-        pfControlHeader.setInvalid();
-        meta.pf_meta.pfPacketLength = 0;
+        // PIFINA: Step 5: Execute Pifina Egress Parser
+        pifina_parser(meta.pf_meta);
+        pifina_egress_parser.apply(packet, meta);
 
         transition parse_ethernet;
     }
@@ -155,6 +168,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
                   inout ingress_intrinsic_metadata_for_deparser_t     ig_dprsr_md,
                   inout ingress_intrinsic_metadata_for_tm_t           ig_tm_md) {
 
+    // PIFINA: Step 6: Initialize Pifina control blocks
     PfIngressStartProbe() pfIngressStartProbe;
     PfIngressEndProbe() pfIngressEndProbe;
 
@@ -187,7 +201,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
     }
 
     apply {
-        // Start Ingress measurement
+        // PIFINA: Step 7: Start Ingress measurement
         pfIngressStartProbe.apply(hdr, meta);
 
         // Run IPv4 routing logic.
@@ -195,7 +209,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
         // Dummy register write
         database.write(ig_tm_md.ucast_egress_port, hdr.ipv4.ttl);
 
-        // LAST Operation
+        // PIFINA: Step 8: last Operation
         pfIngressEndProbe.apply(hdr, meta);
     }
 }
@@ -212,14 +226,15 @@ control SwitchEgress(inout egress_headers_t hdr,
                  inout egress_intrinsic_metadata_for_deparser_t      eg_dprsr_md,
                  inout egress_intrinsic_metadata_for_output_port_t   eg_oport_md) {
 
+    // PIFINA: Step 9: Initialize PIFINA probes
     PfEgressStartProbe() pfEgressStartProbe;
     PfEgressEndProbe() pfEgressEndProbe;
 
     apply {
-        // Start Egress measurement. Using count leaving TM
+        // PIFINA: Step 9: Start Egress measurement. Using count leaving TM
         pfEgressStartProbe.apply(hdr, meta, eg_intr_md);
 
-        // End Egress measurement. Using count from deparser
+        // PIFINA: Step 10: End Egress measurement. Using count from deparser
         pfEgressEndProbe.apply(hdr, meta);
     }
 }
