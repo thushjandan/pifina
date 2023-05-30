@@ -36,7 +36,11 @@ func main() {
 			{
 				Name:    "create",
 				Aliases: []string{"c"},
-				Usage:   "Creates customized P4 source code",
+				Usage:   `Example: pifina-cli create -k hdr.ipv4.protocol:exact -k hdr.ipv4.dstAddr:ternary -k hdr.ipv4.srcAddr:ternary -o src/myP4app/include `,
+				Description: `Creates customized Pifina P4 source code with user defined match fields. 
+Use for every match key the flag -key and define the name of the field together with its match type delimited by a colon (:) like field1:matchType
+In addition the output directory for the generated P4 source code files needs to be defined with flag -o
+Following match types can be used: exact, ternary, lpm`,
 				Flags: []cli.Flag{
 					&cli.StringSliceFlag{
 						Name:     "key",
@@ -55,6 +59,7 @@ func main() {
 			},
 		},
 	}
+	// Parse CLI arguments
 	app.Run(os.Args)
 }
 
