@@ -73,6 +73,7 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
             hdr.ipv4.protocol: exact;
             hdr.ipv4.dstAddr: ternary;
             hdr.ipv4.srcAddr: ternary;
+            
         }
         actions = {
             pf_start_ingress_measure;

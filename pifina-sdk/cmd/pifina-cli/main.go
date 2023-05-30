@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/generator"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/urfave/cli/v2"
@@ -42,6 +44,12 @@ func main() {
 						Required: true,
 						Usage:    "which P4 header fields to match => Table keys for PIFINA",
 					},
+					&cli.StringFlag{
+						Name:    "output",
+						Aliases: []string{"o"},
+						Value:   ".",
+						Usage:   "output directory for generated P4 source code files.",
+					},
 				},
 				Action: createAction,
 			},
@@ -59,6 +67,7 @@ func createAction(cCtx *cli.Context) error {
 	templateKeys := make([]*model.P4CodeTemplateKey, 0, len(keys))
 	for _, k := range keys {
 		keyObj := strings.Split(k, ":")
+		// key:matchtype => Exact two values after split
 		if len(keyObj) != 2 {
 			return cli.Exit(
 				fmt.Sprintf(
@@ -101,16 +110,28 @@ func createAction(cCtx *cli.Context) error {
 			MatchType: matchType,
 		})
 	}
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:  "PIFINA-cli",
+		Level: hclog.LevelFromString("info"),
+		Color: hclog.AutoColor,
+	})
+
+	outputDir := filepath.Dir(cCtx.String("output"))
+
 	templateOptions := &model.P4CodeTemplate{
 		SessionIdWidth: SESSION_ID_WIDTH,
 		MatchKeys:      templateKeys,
 	}
 
+	logger.Info("Generating files...")
 	// Generator template
-	err := generator.GenerateP4App(templateOptions)
+	err := generator.GenerateP4App(logger, templateOptions, outputDir)
 	if err != nil {
-		return cli.Exit(err, 1)
+		logger.Error("Error occured!", "err", err)
+		os.Exit(1)
+		return nil
 	}
+	logger.Info("All necessary PIFINA files have been generated. Include these files according to the manual in your P4 application source code.")
 
 	return nil
 }
