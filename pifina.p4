@@ -101,7 +101,7 @@ parser SwitchIngressParser(packet_in packet,
         packet.advance(PORT_METADATA_SIZE);
 
         // PIFINA: Step 3. Call pifina_ingress_parser with pf_meta as parameter 
-        pifina_parser(meta.pf_meta);
+        pifina_ig_parser_init(meta.pf_meta);
 
         transition parse_ethernet;
     }
@@ -128,15 +128,15 @@ parser SwitchEgressParser(packet_in packet,
                 out egress_intrinsic_metadata_t eg_intr_md) {
 
     // PIFINA: Step 4: Initialize Pifina Egress Parser
-    PifinaEgressParser() pifina_egress_parser;
+    PifinaEgressParser() pifina_eg_parser;
 
     state start {
         /* TNA-specific Code for simple cases */
         packet.extract(eg_intr_md);
 
         // PIFINA: Step 5: Execute Pifina Egress Parser
-        pifina_parser(meta.pf_meta);
-        pifina_egress_parser.apply(packet, meta);
+        pifina_eg_parser_init(meta.pf_meta);
+        pifina_eg_parser.apply(packet, meta);
 
         transition parse_ethernet;
     }

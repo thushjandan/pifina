@@ -17,7 +17,8 @@
 */
 
 // Initialize pifina meta data fields to default values.
-#define pifina_parser(meta) meta = {false, 0, 0}
+#define pifina_ig_parser_init(meta) meta = {false, 0}
+#define pifina_eg_parser_init(meta) meta = {false, 0, 0}
 
 /**
 * Egress parser to extract data from temporary pifina control header.

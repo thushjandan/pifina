@@ -32,7 +32,6 @@ header pf_control_t {
 struct pf_ingress_metadata_t {
     bool pfIsMatch;
     pf_stats_width_t pfSessionId;
-    bit<32> pfOrigHdrLength;
 }
 
 struct pf_egress_metadata_t {
