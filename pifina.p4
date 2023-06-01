@@ -210,7 +210,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
         database.write(ig_tm_md.ucast_egress_port, hdr.ipv4.ttl);
 
         // PIFINA: Step 8: last Operation
-        pfIngressEndProbe.apply(hdr, meta);
+        pfIngressEndProbe.apply(hdr, meta, ig_intr_md);
     }
 }
 

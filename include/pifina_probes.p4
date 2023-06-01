@@ -92,7 +92,7 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
 /**
 * Pifina Ingress End probe
 */
-control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t meta) {
+control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t meta, in ingress_intrinsic_metadata_t ig_intr_md) {
     // Header byte counter BEFORE deparser
     @name("PF_INGRESS_END_HDR_SIZE")
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
@@ -100,6 +100,23 @@ control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t met
         void apply(inout bit<32> byteCount) {
             // Increment counter by packet header size
             byteCount = byteCount + sizeInBytes(hdr);
+        }
+    };
+
+    @name("PF_INGRESS_TSTAMP_DIFF_LOW")
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressJitterLowRegister; 
+    RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressJitterLowRegister) pfIngressJitterLowRegisterAction = {
+        void apply(inout bit<32> tstamp) {
+            // Increment counter by packet header size
+            tstamp = ig_intr_md.ingress_mac_tstamp[31:0] - tstamp;
+        }
+    };
+    @name("PF_INGRESS_TSTAMP_DIFF_HIGH")
+    Register<bit<16>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressJitterHighRegister; 
+    RegisterAction<bit<16>, pf_stats_width_t, void>(pfIngressJitterHighRegister) pfIngressJitterHighRegisterAction = {
+        void apply(inout bit<16> tstamp) {
+            // Increment counter by packet header size
+            tstamp = ig_intr_md.ingress_mac_tstamp[47:32] - tstamp;
         }
     };
 
@@ -112,11 +129,21 @@ control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t met
         hdr.pfControl.pfSessionId = meta.pf_meta.pfSessionId;
     }
 
+    action pf_measure_jitter_low() {
+        pfIngressJitterLowRegisterAction.execute(meta.pf_meta.pfSessionId);
+    }
+
+    action pf_measure_jitter_high() {
+        pfIngressJitterHighRegisterAction.execute(meta.pf_meta.pfSessionId);
+    }
+
     apply {
         // LAST Operation
         // End Ingress measurement.
         if (meta.pf_meta.pfIsMatch == true) {
             pf_end_ingress_measure();
+            pf_measure_jitter_low();
+            pf_measure_jitter_high();
         }
     }
 }
