@@ -136,7 +136,7 @@ parser SwitchEgressParser(packet_in packet,
 
         // PIFINA: Step 5: Execute Pifina Egress Parser
         pifina_eg_parser_init(meta.pf_meta);
-        pifina_eg_parser.apply(packet, meta);
+        pifina_eg_parser.apply(packet, meta.pf_meta);
 
         transition parse_ethernet;
     }
@@ -202,7 +202,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
 
     apply {
         // PIFINA: Step 7: Start Ingress measurement
-        pfIngressStartProbe.apply(hdr, meta);
+        pfIngressStartProbe.apply(hdr, meta.pf_meta);
 
         // Run IPv4 routing logic.
         ipv4_lpm.apply();
@@ -210,7 +210,7 @@ control SwitchIngress(inout ingress_headers_t hdr,
         database.write(ig_tm_md.ucast_egress_port, hdr.ipv4.ttl);
 
         // PIFINA: Step 8: last Operation
-        pfIngressEndProbe.apply(hdr, meta, ig_intr_md);
+        pfIngressEndProbe.apply(hdr, meta.pf_meta, ig_intr_md);
     }
 }
 
@@ -232,10 +232,10 @@ control SwitchEgress(inout egress_headers_t hdr,
 
     apply {
         // PIFINA: Step 9: Start Egress measurement. Using count leaving TM
-        pfEgressStartProbe.apply(hdr, meta, eg_intr_md);
+        pfEgressStartProbe.apply(hdr, meta.pf_meta, eg_intr_md);
 
         // PIFINA: Step 10: End Egress measurement. Using count from deparser
-        pfEgressEndProbe.apply(hdr, meta);
+        pfEgressEndProbe.apply(hdr, meta.pf_meta);
     }
 }
 
