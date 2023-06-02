@@ -54,6 +54,26 @@ Following match types can be used: exact, ternary, lpm`,
 						Value:   ".",
 						Usage:   "output directory for generated P4 source code files.",
 					},
+					&cli.StringFlag{
+						Name:  "ig-hdr",
+						Value: "ingress_headers_t",
+						Usage: "Name of your ingress header struct.",
+					},
+					&cli.StringFlag{
+						Name:  "eg-hdr",
+						Value: "egress_headers_t",
+						Usage: "Name of your egress header struct.",
+					},
+					&cli.IntFlag{
+						Name:  "ig-probe",
+						Value: 0,
+						Usage: "Count of additional ingress probes",
+					},
+					&cli.IntFlag{
+						Name:  "eg-probe",
+						Value: 0,
+						Usage: "Count of additional egress probes",
+					},
 				},
 				Action: createAction,
 			},
@@ -123,9 +143,29 @@ func createAction(cCtx *cli.Context) error {
 
 	outputDir := filepath.Dir(cCtx.String("output"))
 
+	// Generate a list of requested additional header byte probes
+	extraProbes := make([]model.ExtraProbeTemplate, 0)
+	// additional ingress probes
+	for i := 1; i <= cCtx.Int("ig-probe"); i++ {
+		extraProbes = append(extraProbes, model.ExtraProbeTemplate{
+			Name: fmt.Sprintf("%02d", i),
+			Type: model.EXTRA_PROBE_TYPE_IG,
+		})
+	}
+	// additional egress probes
+	for i := 1; i <= cCtx.Int("eg-probe"); i++ {
+		extraProbes = append(extraProbes, model.ExtraProbeTemplate{
+			Name: fmt.Sprintf("%02d", i),
+			Type: model.EXTRA_PROBE_TYPE_EG,
+		})
+	}
+
 	templateOptions := &model.P4CodeTemplate{
-		SessionIdWidth: SESSION_ID_WIDTH,
-		MatchKeys:      templateKeys,
+		SessionIdWidth:    SESSION_ID_WIDTH,
+		MatchKeys:         templateKeys,
+		IngressHeaderType: cCtx.String("ig-hdr"),
+		EgressHeaderType:  cCtx.String("eg-hdr"),
+		ExtraProbeList:    extraProbes,
 	}
 
 	logger.Info("Generating files...")

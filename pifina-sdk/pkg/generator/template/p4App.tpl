@@ -24,16 +24,16 @@
 /**
 * Egress parser to extract data from temporary pifina control header.
 */
-parser PifinaEgressParser(packet_in packet, inout egress_metadata_t meta) {
+parser PifinaEgressParser(packet_in packet, inout pf_egress_metadata_t meta) {
     pf_control_t pfControlHeader;
 
     state start {
         packet.extract(pfControlHeader);
 
-        meta.pf_meta.pfIsMatch = pfControlHeader.pfIsMatch;
-        meta.pf_meta.pfSessionId = pfControlHeader.pfSessionId;
+        meta.pfIsMatch = pfControlHeader.pfIsMatch;
+        meta.pfSessionId = pfControlHeader.pfSessionId;
         pfControlHeader.setInvalid();
-        meta.pf_meta.pfPacketLength = 0;
+        meta.pfPacketLength = 0;
         transition accept;
     }
 }
@@ -41,7 +41,7 @@ parser PifinaEgressParser(packet_in packet, inout egress_metadata_t meta) {
 /**
 * Pifina Ingress Start probe
 */
-control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t meta) {
+control PfIngressStartProbe(in {{ .IngressHeaderType }} hdr, inout pf_ingress_metadata_t meta) {
     // Counter attached to Match action. 
     // Spec: 2 entries per RAM word, 28 bit packet counter width & 36 bit byte counter width
     DirectCounter<bit<36>>(CounterType_t.PACKETS_AND_BYTES) pfIngressStartCounter;
@@ -61,8 +61,8 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
         // Trigger direct counter
         pfIngressStartCounter.count();
         // Flag the packet for further processing.
-        meta.pf_meta.pfIsMatch = true;
-        meta.pf_meta.pfSessionId = sessionId;
+        meta.pfIsMatch = true;
+        meta.pfSessionId = sessionId;
         // Trigger header size counter
         pfIngressStartByteRegisterAction.execute(sessionId);
     }
@@ -91,7 +91,7 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout ingress_metadata_t m
 /**
 * Pifina Ingress End probe
 */
-control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t meta) {
+control PfIngressEndProbe(inout {{ .IngressHeaderType }} hdr, in pf_ingress_metadata_t meta, in ingress_intrinsic_metadata_t ig_intr_md) {
     // Header byte counter BEFORE deparser
     @name("PF_INGRESS_END_HDR_SIZE")
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
@@ -102,20 +102,47 @@ control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t met
         }
     };
 
+    @name("PF_INGRESS_TSTAMP_DIFF_LOW")
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressJitterLowRegister; 
+    RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressJitterLowRegister) pfIngressJitterLowRegisterAction = {
+        void apply(inout bit<32> tstamp) {
+            // Increment counter by packet header size
+            tstamp = ig_intr_md.ingress_mac_tstamp[31:0] - tstamp;
+        }
+    };
+    @name("PF_INGRESS_TSTAMP_DIFF_HIGH")
+    Register<bit<16>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressJitterHighRegister; 
+    RegisterAction<bit<16>, pf_stats_width_t, void>(pfIngressJitterHighRegister) pfIngressJitterHighRegisterAction = {
+        void apply(inout bit<16> tstamp) {
+            // Increment counter by packet header size
+            tstamp = ig_intr_md.ingress_mac_tstamp[47:32] - tstamp;
+        }
+    };
+
     action pf_end_ingress_measure() {
-        pfIngressEndByteRegisterAction.execute(meta.pf_meta.pfSessionId);
+        pfIngressEndByteRegisterAction.execute(meta.pfSessionId);
 
         // Bridge metadata to egress pipeline
         hdr.pfControl.setValid();
-        hdr.pfControl.pfIsMatch = meta.pf_meta.pfIsMatch;
-        hdr.pfControl.pfSessionId = meta.pf_meta.pfSessionId;
+        hdr.pfControl.pfIsMatch = meta.pfIsMatch;
+        hdr.pfControl.pfSessionId = meta.pfSessionId;
+    }
+
+    action pf_measure_jitter_low() {
+        pfIngressJitterLowRegisterAction.execute(meta.pfSessionId);
+    }
+
+    action pf_measure_jitter_high() {
+        pfIngressJitterHighRegisterAction.execute(meta.pfSessionId);
     }
 
     apply {
         // LAST Operation
         // End Ingress measurement.
-        if (meta.pf_meta.pfIsMatch == true) {
+        if (meta.pfIsMatch == true) {
             pf_end_ingress_measure();
+            pf_measure_jitter_low();
+            pf_measure_jitter_high();
         }
     }
 }
@@ -123,20 +150,20 @@ control PfIngressEndProbe(inout ingress_headers_t hdr, in ingress_metadata_t met
 /**
 * Pifina Egress Start probe
 */
-control PfEgressStartProbe(in egress_headers_t hdr, inout egress_metadata_t meta, in egress_intrinsic_metadata_t eg_intr_md) {
+control PfEgressStartProbe(in {{ .EgressHeaderType }} hdr, inout pf_egress_metadata_t meta, in egress_intrinsic_metadata_t eg_intr_md) {
     // Spec: 2 entries per RAM word, 28 bit packet counter width & 36 bit byte counter width
     @name("PF_EGRESS_START_CNT")
     Counter<bit<36>, pf_stats_width_t>(PF_TABLE_SIZE, CounterType_t.PACKETS_AND_BYTES) pfEgressStartCounter;
 
     action pf_start_egress_measure() {
         // Decrement 1 byte overhead from bridge header
-        pfEgressStartCounter.count(meta.pf_meta.pfSessionId, 1);
+        pfEgressStartCounter.count(meta.pfSessionId, 1);
     }
     
     apply {
-        if (meta.pf_meta.pfIsMatch == true) {
+        if (meta.pfIsMatch == true) {
             // Calculate packet payload size for later uses.
-            meta.pf_meta.pfPacketLength = (bit<32>) eg_intr_md.pkt_length - sizeInBytes(hdr);
+            meta.pfPacketLength = (bit<32>) eg_intr_md.pkt_length - sizeInBytes(hdr);
             pf_start_egress_measure();
         }
     }
@@ -145,25 +172,56 @@ control PfEgressStartProbe(in egress_headers_t hdr, inout egress_metadata_t meta
 /**
 * Pifina Egress End probe
 */
-control PfEgressEndProbe(in egress_headers_t hdr, inout egress_metadata_t meta) {
+control PfEgressEndProbe(in {{ .EgressHeaderType }} hdr, inout pf_egress_metadata_t meta) {
     // Header byte counter BEFORE deparser
     @name("PF_EGRESS_END_CNT")
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfEgressEndByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfEgressEndByteRegister) pfEgressEndByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
-            byteCount = byteCount + meta.pf_meta.pfPacketLength;
+            byteCount = byteCount + meta.pfPacketLength;
         }
     };
 
     action pf_end_egress_measure() {
-        pfEgressEndByteRegisterAction.execute(meta.pf_meta.pfSessionId);
+        pfEgressEndByteRegisterAction.execute(meta.pfSessionId);
     }
     
     apply {
-        if (meta.pf_meta.pfIsMatch == true) {
+        if (meta.pfIsMatch == true) {
             // Add current packet header size
-            meta.pf_meta.pfPacketLength = meta.pf_meta.pfPacketLength + sizeInBytes(hdr);
+            meta.pfPacketLength = meta.pfPacketLength + sizeInBytes(hdr);
             pf_end_egress_measure();
         }
     }
 }
+{{ range .ExtraProbeList }}
+/**
+* Pifina {{ .Type }} Extra probe {{ .Name }}
+*/
+{{- if eq .Type "INGRESS" }}
+control PfIngressExtraProbe{{ .Name }}(in {{ $.IngressHeaderType }} hdr, in pf_ingress_metadata_t meta) {
+    // Header byte counter BEFORE deparser
+    @name("PF_INGRESS_EXTRA_{{ .Name }}")
+{{- else }}
+control PfEgressExtraProbe{{ .Name }}(in {{ $.EgressHeaderType }} hdr, in pf_egress_metadata_t meta) {
+    // Header byte counter BEFORE deparser
+    @name("PF_EGRESS_EXTRA_{{ .Name }}")
+{{- end }}
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfHdrByteRegister; 
+    RegisterAction<bit<32>, pf_stats_width_t, void>(pfHdrByteRegister) pfHdrByteRegisterAction = {
+        void apply(inout bit<32> byteCount) {
+            byteCount = byteCount + sizeInBytes(hdr);
+        }
+    };
+
+    action pf_extra_measure() {
+        pfHdrByteRegisterAction.execute(meta.pfSessionId);
+    }
+    
+    apply {
+        if (meta.pfIsMatch == true) {
+            pf_extra_measure();
+        }
+    }
+}
+{{end}}
