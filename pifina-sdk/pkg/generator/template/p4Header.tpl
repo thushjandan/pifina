@@ -20,7 +20,7 @@
 
 
 // Size of lookup table in bits. 7 bits = 127 entries
-#define PF_TABLE_SIZE_WIDTH {{ .SessionIdWidth }}
+#define PF_TABLE_SIZE_WIDTH 7
 #define PF_TABLE_SIZE 1<<PF_TABLE_SIZE_WIDTH
 
 typedef bit<PF_TABLE_SIZE_WIDTH> pf_stats_width_t;
@@ -31,12 +31,12 @@ header pf_control_t {
 }
 
 struct pf_ingress_metadata_t {
-    bool pfIsMatch;
-    pf_stats_width_t pfSessionId;
+    pf_control_t pfControl;
+    bit<48> pfJitter;
+    bit<48> pfArrivalLatency;
 }
 
 struct pf_egress_metadata_t {
-    bool pfIsMatch;
-    pf_stats_width_t pfSessionId;
+    pf_control_t pfControl;
     bit<32> pfPacketLength;
 }
