@@ -43,6 +43,13 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	go collector.CollectEgressEndCounter(ctx, wg, metricSink)
 	go collector.CollectAppRegisterValues(ctx, wg, metricSink)
 	go collector.CollectTrafficManagerCounters(ctx, wg, metricSink)
+
+	// Start collector for each extra probe
+	extraProbes := collector.driver.GetExtraProbes()
+	for i := range extraProbes {
+		wg.Add(1)
+		go collector.CollectExtraHeaderSizeCounter(ctx, wg, metricSink, extraProbes[i])
+	}
 }
 
 func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
@@ -172,6 +179,33 @@ func (collector *MetricCollector) CollectEgressEndCounter(ctx context.Context, w
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Egress end counter collector...")
+			return
+		}
+	}
+
+}
+
+func (collector *MetricCollector) CollectExtraHeaderSizeCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem, shortTblName string) {
+	defer wg.Done()
+
+	ticker := time.NewTicker(collector.sampleInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			sessionIds := collector.ts.GetSessionIdCache()
+			metrics, err := collector.driver.GetHdrSizeCounter(shortTblName, sessionIds)
+			if err != nil {
+				collector.logger.Error("Error occured during collection counter", "shortTblName", shortTblName, "err", err)
+			} else {
+				collector.logger.Trace("Collection of header size counter has succeeded.", "shortTblName", shortTblName)
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
+			}
+		case <-ctx.Done():
+			collector.logger.Info("Stopping header size counter collector...", "shortTblName", shortTblName)
 			return
 		}
 	}

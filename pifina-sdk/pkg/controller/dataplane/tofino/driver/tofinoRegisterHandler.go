@@ -11,15 +11,34 @@ import (
 // Retrieve Ingress End header byte counter by a list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
 func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
-	driver.logger.Trace("Requesting Ingress start header byte counter", "sessionIds", sessionIds)
+	return driver.GetHdrSizeCounter(PROBE_INGRESS_START_HDR_SIZE, sessionIds)
+}
+
+// Retrieve Ingress End header byte counter by a list of sessionIds.
+// The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
+func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
+	return driver.GetHdrSizeCounter(PROBE_INGRESS_END_HDR_SIZE, sessionIds)
+}
+
+// Retrieve Egress End packet byte counter by a list of sessionIds.
+// Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
+func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
+	return driver.GetHdrSizeCounter(PROBE_EGRESS_END_CNT, sessionIds)
+}
+
+// Retrieve header byte counter by a short table name and list of sessionIds.
+// The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
+func (driver *TofinoDriver) GetHdrSizeCounter(shortTblName string, sessionIds []uint32) ([]*model.MetricItem, error) {
+	driver.logger.Trace("Requesting header byte counter", "tblName", shortTblName, "sessionIds", sessionIds)
 
 	if len(sessionIds) == 0 {
 		return nil, nil
 	}
-	tblName := driver.FindTableNameByShortName(PROBE_INGRESS_START_HDR_SIZE)
+
+	tblName := driver.FindTableNameByShortName(shortTblName)
 
 	if tblName == "" {
-		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_START_HDR_SIZE}
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: shortTblName}
 	}
 
 	registersToReq := driver.transformSessionIdToAppRegister(sessionIds, tblName)
@@ -29,66 +48,9 @@ func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*m
 	// If no errors have occured, reset the register
 	if err == nil {
 		// Reset register values
-		driver.ResetRegister(sessionIds, PROBE_INGRESS_START_HDR_SIZE)
+		driver.ResetRegister(sessionIds, shortTblName)
 		for i := range metrics {
-			metrics[i].MetricName = PROBE_INGRESS_START_HDR_SIZE
-		}
-	}
-
-	return metrics, err
-}
-
-// Retrieve Ingress End header byte counter by a list of sessionIds.
-// The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
-	driver.logger.Trace("Requesting Ingress end header byte counter", "sessionIds", sessionIds)
-
-	if len(sessionIds) == 0 {
-		return nil, nil
-	}
-	tblName := driver.FindTableNameByShortName(PROBE_INGRESS_END_HDR_SIZE)
-
-	if tblName == "" {
-		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_END_HDR_SIZE}
-	}
-
-	registersToReq := driver.transformSessionIdToAppRegister(sessionIds, tblName)
-
-	metrics, err := driver.GetMetricFromRegister(registersToReq, model.METRIC_BYTES)
-	// If no errors have occured, reset the register
-	if err == nil {
-		// Reset register values
-		driver.ResetRegister(sessionIds, PROBE_INGRESS_END_HDR_SIZE)
-		for i := range metrics {
-			metrics[i].MetricName = PROBE_INGRESS_END_HDR_SIZE
-		}
-	}
-
-	return metrics, err
-}
-
-// Retrieve Egress End packet byte counter by a list of sessionIds.
-// Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
-	driver.logger.Trace("Requesting Egress end byte counter", "sessionIds", sessionIds)
-	if len(sessionIds) == 0 {
-		return nil, nil
-	}
-	tblName := driver.FindTableNameByShortName(PROBE_EGRESS_END_CNT)
-
-	if tblName == "" {
-		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_EGRESS_END_CNT}
-	}
-
-	registersToReq := driver.transformSessionIdToAppRegister(sessionIds, tblName)
-
-	metrics, err := driver.GetMetricFromRegister(registersToReq, model.METRIC_BYTES)
-	// If no errors have occured, reset the register
-	if err == nil {
-		// Reset register values
-		driver.ResetRegister(sessionIds, PROBE_EGRESS_END_CNT)
-		for i := range metrics {
-			metrics[i].MetricName = PROBE_EGRESS_END_CNT
+			metrics[i].MetricName = shortTblName
 		}
 	}
 

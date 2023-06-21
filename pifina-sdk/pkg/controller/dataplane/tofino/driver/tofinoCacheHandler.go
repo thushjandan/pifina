@@ -7,15 +7,26 @@ import (
 func (driver *TofinoDriver) createP4TableIndex() {
 	driver.indexP4Tables = make(map[string]int)
 	driver.indexByIdP4Tables = make(map[uint32]int)
+	driver.extraProbeNameCache = make([]string, 0)
 	for i := range driver.P4Tables {
-		driver.indexP4Tables[driver.P4Tables[i].Name] = i
+		name := driver.P4Tables[i].Name
+		driver.indexP4Tables[name] = i
 		driver.indexByIdP4Tables[driver.P4Tables[i].Id] = i
 		// Find the full table name of each probe and cache it
 		for _, probe := range PROBE_TABLES {
-			if strings.Contains(driver.P4Tables[i].Name, probe) {
-				driver.probeTableMap[probe] = driver.P4Tables[i].Name
+			if strings.Contains(name, probe) {
+				driver.probeTableMap[probe] = name
 				break
 			}
+		}
+		// Check if there are any extra probes installed
+		if strings.Contains(name, PROBE_EXTRA_INGRESS_NAME) || strings.Contains(name, PROBE_EXTRA_EGRESS_NAME) {
+			tblNameSplit := strings.Split(name, ".")
+			shortTblName := tblNameSplit[len(tblNameSplit)-1]
+			// Add the short name to the table cache
+			driver.probeTableMap[shortTblName] = name
+			// Track extra probes separately
+			driver.extraProbeNameCache = append(driver.extraProbeNameCache, shortTblName)
 		}
 	}
 }
@@ -223,4 +234,9 @@ func (driver *TofinoDriver) GetSingletonDataIdLikeName(tblName, shortDataName st
 		}
 	}
 	return dataId
+}
+
+func (driver *TofinoDriver) GetExtraProbes() []string {
+	// Return from cache if exists
+	return driver.extraProbeNameCache
 }
