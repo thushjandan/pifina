@@ -31,14 +31,12 @@ header pf_control_t {
 }
 
 struct pf_ingress_metadata_t {
-    bool pfIsMatch;
-    pf_stats_width_t pfSessionId;
+    pf_control_t pfControl;
     bit<48> pfJitter;
     bit<48> pfArrivalLatency;
 }
 
 struct pf_egress_metadata_t {
-    bool pfIsMatch;
-    pf_stats_width_t pfSessionId;
+    pf_control_t pfControl;
     bit<32> pfPacketLength;
 }

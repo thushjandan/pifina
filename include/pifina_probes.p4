@@ -18,25 +18,9 @@
 */
 
 // Initialize pifina meta data fields to default values.
-#define pifina_ig_parser_init(meta) meta = {false, 0, 0, 0}
-#define pifina_eg_parser_init(meta) meta = {false, 0, 0}
-
-/**
-* Egress parser to extract data from temporary pifina control header.
-*/
-parser PifinaEgressParser(packet_in packet, inout pf_egress_metadata_t meta) {
-    pf_control_t pfControlHeader;
-
-    state start {
-        packet.extract(pfControlHeader);
-
-        meta.pfIsMatch = pfControlHeader.pfIsMatch;
-        meta.pfSessionId = pfControlHeader.pfSessionId;
-        pfControlHeader.setInvalid();
-        meta.pfPacketLength = 0;
-        transition accept;
-    }
-}
+#define pifina_ig_parser_init(meta) meta = {{false, 0}, 0, 0}
+#define pifina_eg_parser_init(packet,meta) meta = {{false, 0}, 0}; \
+                                    packet.extract(meta.pfControl)
 
 /**
 * Pifina Ingress Start probe
@@ -61,8 +45,9 @@ control PfIngressStartProbe(in ingress_headers_t hdr, inout pf_ingress_metadata_
         // Trigger direct counter
         pfIngressStartCounter.count();
         // Flag the packet for further processing.
-        meta.pfIsMatch = true;
-        meta.pfSessionId = sessionId;
+        meta.pfControl.setValid();
+        meta.pfControl.pfIsMatch = true;
+        meta.pfControl.pfSessionId = sessionId;
         // Trigger header size counter
         pfIngressStartByteRegisterAction.execute(sessionId);
     }
@@ -129,30 +114,25 @@ control PfIngressEndProbe(inout ingress_headers_t hdr, inout pf_ingress_metadata
     Lpf<bit<48>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressJitterLpf;
 
     action pf_end_ingress_measure() {
-        pfIngressEndByteRegisterAction.execute(meta.pfSessionId);
-
-        // Bridge metadata to egress pipeline
-        hdr.pfControl.setValid();
-        hdr.pfControl.pfIsMatch = meta.pfIsMatch;
-        hdr.pfControl.pfSessionId = meta.pfSessionId;
+        pfIngressEndByteRegisterAction.execute(meta.pfControl.pfSessionId);
     }
 
     // approx. compute exponential moving average with help of low pass filter
     action pf_calc_moving_average() {
-        meta.pfJitter = pfIngressJitterLpf.execute(meta.pfArrivalLatency, meta.pfSessionId);
+        meta.pfJitter = pfIngressJitterLpf.execute(meta.pfArrivalLatency, meta.pfControl.pfSessionId);
     }
 
     action pf_store_jitter() {
-        pfJitterRegisterAction.execute(meta.pfSessionId);     
+        pfJitterRegisterAction.execute(meta.pfControl.pfSessionId);
     }
 
     apply {
         // LAST Operation
         // End Ingress measurement.
-        if (meta.pfIsMatch == true) {
+        if (meta.pfControl.pfIsMatch == true) {
             pf_end_ingress_measure();
             // Compute latency and store current timestamp
-            meta.pfArrivalLatency = pfPreviousTstampAction.execute(meta.pfSessionId);
+            meta.pfArrivalLatency = pfPreviousTstampAction.execute(meta.pfControl.pfSessionId);
             // Compute moving average over LPF unit
             pf_calc_moving_average();
             // Store computed jitter value in register
@@ -171,11 +151,11 @@ control PfEgressStartProbe(in egress_headers_t hdr, inout pf_egress_metadata_t m
 
     action pf_start_egress_measure() {
         // Decrement 1 byte overhead from bridge header
-        pfEgressStartCounter.count(meta.pfSessionId, 1);
+        pfEgressStartCounter.count(meta.pfControl.pfSessionId, 1);
     }
     
     apply {
-        if (meta.pfIsMatch == true) {
+        if (meta.pfControl.pfIsMatch == true) {
             // Calculate packet payload size for later uses.
             meta.pfPacketLength = (bit<32>) eg_intr_md.pkt_length - sizeInBytes(hdr);
             pf_start_egress_measure();
@@ -197,11 +177,11 @@ control PfEgressEndProbe(in egress_headers_t hdr, inout pf_egress_metadata_t met
     };
 
     action pf_end_egress_measure() {
-        pfEgressEndByteRegisterAction.execute(meta.pfSessionId);
+        pfEgressEndByteRegisterAction.execute(meta.pfControl.pfSessionId);
     }
     
     apply {
-        if (meta.pfIsMatch == true) {
+        if (meta.pfControl.pfIsMatch == true) {
             // Add current packet header size
             meta.pfPacketLength = meta.pfPacketLength + sizeInBytes(hdr);
             pf_end_egress_measure();

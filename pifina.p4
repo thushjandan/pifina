@@ -65,7 +65,6 @@ header udp_t {
 }
 
 struct ingress_headers_t {
-    pf_control_t        pfControl;
     ethernet_t          ethernet;
     ipv4_t              ipv4;
 }
@@ -127,16 +126,12 @@ parser SwitchEgressParser(packet_in packet,
                 out egress_metadata_t meta,
                 out egress_intrinsic_metadata_t eg_intr_md) {
 
-    // PIFINA: Step 4: Initialize Pifina Egress Parser
-    PifinaEgressParser() pifina_eg_parser;
-
     state start {
         /* TNA-specific Code for simple cases */
         packet.extract(eg_intr_md);
 
         // PIFINA: Step 5: Execute Pifina Egress Parser
-        pifina_eg_parser_init(meta.pf_meta);
-        pifina_eg_parser.apply(packet, meta.pf_meta);
+        pifina_eg_parser_init(packet, meta.pf_meta);
 
         transition parse_ethernet;
     }
@@ -267,7 +262,8 @@ control SwitchIngressDeparser(packet_out packet,
             hdr.ipv4.dstAddr 
         });
 
-        packet.emit(hdr.pfControl);
+        // PIFINA: Step 11: Emit Pifina bridge header
+        packet.emit(meta.pf_meta.pfControl);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
     }
