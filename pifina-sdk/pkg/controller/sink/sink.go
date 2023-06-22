@@ -38,9 +38,14 @@ func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*mode
 	for {
 		select {
 		case metrics := <-c:
-			err := s.Emit(metrics)
-			if err != nil {
-				s.logger.Error("Error occured the transmission of the metrics", "error", err)
+			// Chunk metric slice in size of 20 items
+			// Avoids UDP fragmentation => below 1460 bytes.
+			metricChunks := chunkSlice(metrics, 20)
+			for i := range metricChunks {
+				err := s.Emit(metricChunks[i])
+				if err != nil {
+					s.logger.Error("Error occured the transmission of the metrics", "error", err)
+				}
 			}
 		case <-ctx.Done():
 			s.logger.Info("Stopping pifina sink...")
@@ -87,4 +92,21 @@ func (s *Sink) Emit(metrics []*model.MetricItem) error {
 	s.logger.Debug("Metrics has been sent to pifina server", "server", s.pifinaEndpoint)
 
 	return nil
+}
+
+func chunkSlice(slice []*model.MetricItem, chunkSize int) [][]*model.MetricItem {
+	var chunks [][]*model.MetricItem
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+
+		// necessary check to avoid slicing beyond
+		// slice capacity
+		if end > len(slice) {
+			end = len(slice)
+		}
+
+		chunks = append(chunks, slice[i:end])
+	}
+
+	return chunks
 }
