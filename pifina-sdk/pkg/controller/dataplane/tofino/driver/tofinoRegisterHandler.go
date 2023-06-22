@@ -2,6 +2,7 @@ package driver
 
 import (
 	"encoding/binary"
+	"strings"
 	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
@@ -51,6 +52,37 @@ func (driver *TofinoDriver) GetHdrSizeCounter(shortTblName string, sessionIds []
 		driver.ResetRegister(sessionIds, shortTblName)
 		for i := range metrics {
 			metrics[i].MetricName = shortTblName
+		}
+	}
+
+	return metrics, err
+}
+
+// Collect ingress jitter value from register.
+// The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
+func (driver *TofinoDriver) GetIngressJitter(sessionIds []uint32) ([]*model.MetricItem, error) {
+	driver.logger.Trace("Requesting ingress jitter", "sessionIds", sessionIds)
+
+	if len(sessionIds) == 0 {
+		return nil, nil
+	}
+
+	tblName := driver.FindTableNameByShortName(PROBE_INGRESS_JITTER_REGISTER)
+
+	if tblName == "" {
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_JITTER_REGISTER}
+	}
+
+	registersToReq := driver.transformSessionIdToAppRegister(sessionIds, tblName)
+
+	// Retrieve register values for selected sessionId
+	metrics, err := driver.GetMetricFromRegister(registersToReq, model.METRIC_EXT_VALUE)
+	// If no errors have occured, reset the register
+	if err == nil {
+		for i := range metrics {
+			metrics[i].MetricName = PROBE_INGRESS_JITTER_REGISTER
+			// Convert ns to microsecond
+			metrics[i].Value = metrics[i].Value / 1000
 		}
 	}
 
@@ -118,22 +150,36 @@ func (driver *TofinoDriver) GetMetricFromRegister(appRegisters []*model.AppRegis
 		// Get sessionId from key field.
 		sessionId := binary.BigEndian.Uint32(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
 		dataEntries := entities[i].GetTableEntry().GetData().GetFields()
+		tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
+
 		for data_i := range dataEntries {
 			// Dataplane could return just a single byte instead of 4 bytes.
 			// So we copy the response in a 4 byte slice.
 			rawValue := dataEntries[data_i].GetStream()
-			buffer := make([]byte, 4)
-			copy(buffer[len(buffer)-len(rawValue):], rawValue)
+			var decodedValue uint64
+			// Check if data value is 64-bit or 32 bit
+			if len(rawValue) == 8 {
+				if strings.Contains(tblName, PROBE_INGRESS_JITTER_REGISTER) {
+					buffer := make([]byte, 4)
+					copy(buffer[:], rawValue[0:3])
+					decodedValue = uint64(binary.BigEndian.Uint32(buffer))
+				} else {
+					decodedValue = binary.BigEndian.Uint64(rawValue)
+				}
+			} else {
+				buffer := make([]byte, 4)
+				copy(buffer[len(buffer)-len(rawValue):], rawValue)
+				decodedValue = uint64(binary.BigEndian.Uint32(buffer))
+			}
 
-			decodedValue := binary.BigEndian.Uint32(buffer)
 			// Skip loop if value is 0
-			if decodedValue == 0 {
+			if decodedValue == 0 && data_i != 0 {
 				continue
 			}
-			tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
+
 			transformedMetrics = append(transformedMetrics, &model.MetricItem{
 				SessionId:   sessionId,
-				Value:       uint64(decodedValue),
+				Value:       decodedValue,
 				Type:        metricType,
 				MetricName:  tblName,
 				LastUpdated: timeNow,

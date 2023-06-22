@@ -53,8 +53,7 @@ const (
 	TABLE_NAME_TM_CNT_EG                      = "tf2.tm.counter.eg_port"
 	TABLE_NAME_TM_CNT_PIPE                    = "tf2.tm.counter.pipe"
 	DEV_PORT_KEY_NAME                         = "dev_port"
-	PROBE_EXTRA_INGRESS_NAME                  = "PF_INGRESS_EXTRA"
-	PROBE_EXTRA_EGRESS_NAME                   = "PF_EGRESS_EXTRA"
+	PROBE_EXTRA_PREFIX                        = "PF_EXTRA"
 	PROBE_INGRESS_JITTER_LPF                  = "PF_INGRESS_JITTER_LPF"
 	PROBE_INGRESS_JITTER_REGISTER             = "PF_INGRESS_JITTER_AVG"
 )

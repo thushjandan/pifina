@@ -193,11 +193,11 @@ control PfEgressEndProbe(in {{ .EgressHeaderType }} hdr, inout pf_egress_metadat
 {{- if eq .Type "INGRESS" }}
 control PfIngressExtraProbe{{ .Name }}(in {{ $.IngressHeaderType }} hdr, in pf_ingress_metadata_t meta) {
     // Header byte counter BEFORE deparser
-    @name("PF_INGRESS_EXTRA_{{ .Name }}")
+    @name("PF_EXTRA_INGRESS_{{ .Name }}")
 {{- else }}
 control PfEgressExtraProbe{{ .Name }}(in {{ $.EgressHeaderType }} hdr, in pf_egress_metadata_t meta) {
     // Header byte counter BEFORE deparser
-    @name("PF_EGRESS_EXTRA_{{ .Name }}")
+    @name("PF_EXTRA_EGRESS_{{ .Name }}")
 {{- end }}
     Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfHdrByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfHdrByteRegister) pfHdrByteRegisterAction = {

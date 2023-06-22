@@ -40,13 +40,14 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 		collector.logger.Error("Error occured during LPF initialization", "err", err)
 	}
 
-	wg.Add(7)
+	wg.Add(8)
 	// Start collector threads
 	go collector.CollectIngressStartMatchCounter(ctx, wg, metricSink)
 	go collector.CollectIngressHdrStartCounter(ctx, wg, metricSink)
 	go collector.CollectIngressHdrEndCounter(ctx, wg, metricSink)
 	go collector.CollectEgressStartCounter(ctx, wg, metricSink)
 	go collector.CollectEgressEndCounter(ctx, wg, metricSink)
+	go collector.CollectIngressJitter(ctx, wg, metricSink)
 	go collector.CollectAppRegisterValues(ctx, wg, metricSink)
 	go collector.CollectTrafficManagerCounters(ctx, wg, metricSink)
 
@@ -212,6 +213,32 @@ func (collector *MetricCollector) CollectExtraHeaderSizeCounter(ctx context.Cont
 			}
 		case <-ctx.Done():
 			collector.logger.Info("Stopping header size counter collector...", "shortTblName", shortTblName)
+			return
+		}
+	}
+}
+
+func (collector *MetricCollector) CollectIngressJitter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
+	defer wg.Done()
+
+	ticker := time.NewTicker(collector.sampleInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			sessionIds := collector.ts.GetSessionIdCache()
+			metrics, err := collector.driver.GetIngressJitter(sessionIds)
+			if err != nil {
+				collector.logger.Error("Error occured during collection of ingress jitter counter", "err", err)
+			} else {
+				collector.logger.Trace("Collection of ingress jitter counter has succeeded.")
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
+			}
+		case <-ctx.Done():
+			collector.logger.Info("Stopping ingress jitter counter collector...")
 			return
 		}
 	}

@@ -20,7 +20,7 @@ func (driver *TofinoDriver) createP4TableIndex() {
 			}
 		}
 		// Check if there are any extra probes installed
-		if strings.Contains(name, PROBE_EXTRA_INGRESS_NAME) || strings.Contains(name, PROBE_EXTRA_EGRESS_NAME) {
+		if strings.Contains(name, PROBE_EXTRA_PREFIX) {
 			tblNameSplit := strings.Split(name, ".")
 			shortTblName := tblNameSplit[len(tblNameSplit)-1]
 			// Add the short name to the table cache
