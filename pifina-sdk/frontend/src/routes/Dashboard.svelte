@@ -1,11 +1,10 @@
 <script lang="ts">
 	import Chart from './Chart.svelte';
 	import * as Plot from "@observablehq/plot";
-	import type { DTOPifinaMetricItem, MetricData, MetricItem } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_JITTER, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS, PROBE_TM_PIPE_EG_DROP_PKT, PROBE_TM_PIPE_IG_FULL_BUF, PROBE_TM_PIPE_TOTAL_BUF_DROP } from '$lib/models/metricNames';
+	import type { DTOPifinaMetricItem, MetricData } from '../lib/models/MetricItem';
+	import { PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_JITTER, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS, PROBE_TM_PIPE_EG_DROP_PKT, PROBE_TM_PIPE_IG_FULL_BUF, PROBE_TM_PIPE_TOTAL_BUF_DROP } from '$lib/models/metricNames';
 	import { onDestroy } from 'svelte';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
-	import { select } from 'd3';
     export let endpoints: string[];
 
 	let cliendScreenWidth;
@@ -17,8 +16,8 @@
 	let appRegister = new Set<string>();
 	let extraProbeNames = new Set<string>();
 	let tmMetrics = new Set<string>();
-	let devPorts = new Set<string>();
 	let selectedChartCategory = ChartMenuCategoryModel.MAIN_CHARTS;
+	let isEnabled = true;
 
 	const evtSourceMessage = function(event: MessageEvent) {
 		let dataobj: DTOPifinaMetricItem[] = JSON.parse(event.data);
@@ -83,6 +82,22 @@
 		evtSource.onmessage = evtSourceMessage;
 	}
 
+	const startEventStreaming = () => {
+		evtSource = new EventSource(`https://localhost:8655/api/v1/events?stream=${endpoints[0]}`);
+		evtSource.onmessage = evtSourceMessage;		
+	}
+
+	const toggleEventStreaming = () => {
+		if (isEnabled && typeof evtSource !== "undefined") {
+			// Close previous event source
+			evtSource.close()
+		}
+		if (!isEnabled) {
+			startEventStreaming();
+		}
+		isEnabled = !isEnabled;
+	}
+
 	const isMainChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.MAIN_CHARTS;
 	const isTMChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.TM_CHARTS;
 
@@ -111,6 +126,23 @@
 				<option value={endpoint}>{endpoint}</option>
 				{/each}
 			</select>
+		</div>
+	</div>
+	<div class="sm:col-span-3 justify-self-end">
+		<div class="mt-2 mr-4">
+			<button on:click={toggleEventStreaming} class:bg-orange-600={isEnabled} class:hover:bg-orange-800={isEnabled} class:bg-green-600={!isEnabled} class:hover:bg-green-600={!isEnabled} class="text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">
+				{#if isEnabled}
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="inline w-4 h-4 mr-2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
+				</svg>				  
+				Pause
+				{:else}
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="inline w-4 h-4 mr-2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+				</svg>
+				Start
+				{/if}
+			</button>
 		</div>
 	</div>
 </div>
