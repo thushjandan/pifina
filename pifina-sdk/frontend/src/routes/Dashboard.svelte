@@ -2,7 +2,7 @@
 	import Chart from './Chart.svelte';
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData, MetricItem } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS, PROBE_TM_PIPE_EG_DROP_PKT, PROBE_TM_PIPE_IG_FULL_BUF, PROBE_TM_PIPE_TOTAL_BUF_DROP } from '$lib/models/metricNames';
+	import { PIFINA_DEFAULT_PROBES, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_JITTER, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS, PROBE_TM_PIPE_EG_DROP_PKT, PROBE_TM_PIPE_IG_FULL_BUF, PROBE_TM_PIPE_TOTAL_BUF_DROP } from '$lib/models/metricNames';
 	import { onDestroy } from 'svelte';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
 	import { select } from 'd3';
@@ -15,6 +15,7 @@
 	let sessionIdFilterIsDirty = false;
 	let metricData: MetricData = {};
 	let appRegister = new Set<string>();
+	let extraProbeNames = new Set<string>();
 	let tmMetrics = new Set<string>();
 	let devPorts = new Set<string>();
 	let selectedChartCategory = ChartMenuCategoryModel.MAIN_CHARTS;
@@ -24,12 +25,16 @@
 		dataobj.forEach(item => {
 			let key = `${item.metricName}${item.type}`;
 			// Check if it's a metric from a default probe
-			if (!PIFINA_DEFAULT_PROBES.includes(key) && !item.metricName.startsWith("PF_TM_")) {
+			if (!item.metricName.startsWith("PF_")) {
 				appRegister.add(item.metricName);
 				key = item.metricName;
 			}
 			if (item.metricName.startsWith("PF_TM_")) {
 				tmMetrics.add(item.metricName)
+				key = item.metricName;
+			}
+			if (item.metricName.startsWith("PF_EXTRA")) {
+				extraProbeNames.add(item.metricName);
 				key = item.metricName;
 			}
 			// check if key exists. If not, create a new list.
@@ -221,6 +226,42 @@
 		}} />
 	</div>
 	{/if}
+	{#if PROBE_INGRESS_JITTER in metricData }
+	<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+		<h2>Moving average ingress jitter</h2>
+		<Chart options={{
+			x: xScaleOptions,
+			y: {
+				label: "ms",
+				grid: true
+			},
+			width: cliendScreenWidth,
+			color: {legend: true, type: "categorical"},
+			marks: [
+				Plot.line(metricData[PROBE_INGRESS_JITTER], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: (d) => `Start: ${d.sessionId}`, marker: "dot"}),
+				Plot.tip(metricData[PROBE_INGRESS_JITTER], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
+			]
+		}} />
+	</div>
+	{/if}
+	{#each [...extraProbeNames.values()] as entry }
+	<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
+		<h2>{entry}</h2>
+		<Chart options={{
+			x: xScaleOptions,
+			y: {
+				label: "bytes/sec",
+				grid: true
+			},
+			width: cliendScreenWidth,
+			color: {legend: true, type: "categorical"},
+			marks: [
+				Plot.line(metricData[entry], {x: "timestamp", y: "value", stroke: (d) => `${d.sessionId}`, marker: "dot"}),
+				Plot.tip(metricData[entry], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
+			]
+		}} />
+	</div>
+	{/each}
 	{#each [...appRegister.values()] as entry }
 	<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4">
 		<h2>{entry} register (app-owned)</h2>
