@@ -40,8 +40,13 @@ const (
 	PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID = "sessionId"
 	COUNTER_INDEX_KEY_NAME                    = "$COUNTER_INDEX"
 	REGISTER_INDEX_KEY_NAME                   = "$REGISTER_INDEX"
+	LPF_INDEX_KEY_NAME                        = "$LPF_INDEX"
 	COUNTER_SPEC_BYTES                        = "$COUNTER_SPEC_BYTES"
 	COUNTER_SPEC_PKTS                         = "$COUNTER_SPEC_PKTS"
+	LPF_SPEC_TYPE                             = "$LPF_SPEC_TYPE"
+	LPF_GAIN_TIME                             = "$LPF_SPEC_GAIN_TIME_CONSTANT_NS"
+	LPF_DECAY_TIME                            = "$LPF_SPEC_DECAY_TIME_CONSTANT_NS"
+	LPF_SCALE_DOWN_FACTOR                     = "$LPF_SPEC_OUT_SCALE_DOWN_FACTOR"
 	TABLE_TYPE_REGISTER                       = "Register"
 	TABLE_NAME_PORT_INFO                      = "$PORT_STR_INFO"
 	TABLE_NAME_TM_CNT_IG                      = "tf2.tm.counter.ig_port"
@@ -50,9 +55,11 @@ const (
 	DEV_PORT_KEY_NAME                         = "dev_port"
 	PROBE_EXTRA_INGRESS_NAME                  = "PF_INGRESS_EXTRA"
 	PROBE_EXTRA_EGRESS_NAME                   = "PF_EGRESS_EXTRA"
+	PROBE_INGRESS_JITTER_LPF                  = "PF_INGRESS_JITTER_LPF"
+	PROBE_INGRESS_JITTER_REGISTER             = "PF_INGRESS_JITTER_AVG"
 )
 
-var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT}
+var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT, PROBE_INGRESS_JITTER_LPF, PROBE_INGRESS_JITTER_REGISTER}
 
 // Creates new Tofino driver object
 func NewTofinoDriver(logger hclog.Logger) *TofinoDriver {

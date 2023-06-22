@@ -13,6 +13,7 @@ import (
 type TrafficSelector struct {
 	logger                  hclog.Logger
 	driver                  *driver.TofinoDriver
+	lpfTimeConst            float32
 	matchSelectorEntryCache []*model.MatchSelectorEntry
 	appRegisterProbes       []*model.AppRegister
 	appRegisterProbesLock   sync.RWMutex
@@ -20,11 +21,12 @@ type TrafficSelector struct {
 	monitoredDevPortsLock   sync.RWMutex
 }
 
-func NewTrafficSelector(logger hclog.Logger, d *driver.TofinoDriver) *TrafficSelector {
+func NewTrafficSelector(logger hclog.Logger, d *driver.TofinoDriver, lpfTimeConst float32) *TrafficSelector {
 	return &TrafficSelector{
 		logger:            logger.Named("traffic-sel"),
 		driver:            d,
 		appRegisterProbes: make([]*model.AppRegister, 0),
+		lpfTimeConst:      lpfTimeConst,
 	}
 }
 
@@ -60,6 +62,12 @@ func (t *TrafficSelector) AddTrafficSelectorRule(newSelectorRule *model.MatchSel
 		return err
 	}
 	t.logger.Info("A new entry has been added in the dataplane", "sessionId", newSelectorRule.SessionId)
+	// Configure LPF for new selector rule
+	err = t.driver.ConfigureLPF([]uint32{newSelectorRule.SessionId})
+	if err != nil {
+		t.logger.Error("Error occured during LPF configuration for new selector rule", "sessionId", newSelectorRule.SessionId, "err", err)
+	}
+
 	// Refresh match selector cache
 	err = t.LoadSessionsFromDevice()
 	return err
@@ -115,4 +123,10 @@ func (t *TrafficSelector) GetSessionIdCache() []uint32 {
 // Retrieves schema of keys from the P4 schema cache.
 func (t *TrafficSelector) GetTrafficSelectorSchema() ([]*model.MatchSelectorSchema, error) {
 	return t.driver.GetIngressStartMatchSelectorSchema()
+}
+
+// Initialize LPF instances for all configured sessionIds
+func (t *TrafficSelector) ConfigureLPF() error {
+	sessionIds := t.GetSessionIdCache()
+	return t.driver.ConfigureLPF(sessionIds)
 }

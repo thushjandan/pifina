@@ -226,6 +226,11 @@ func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Enti
 }
 
 func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) error {
+	// Ignore empty write requests
+	if updateItems == nil {
+		return nil
+	}
+
 	writeReq := bfruntime.WriteRequest{
 		ClientId:  driver.clientId,
 		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,

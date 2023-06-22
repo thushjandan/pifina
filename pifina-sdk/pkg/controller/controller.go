@@ -34,6 +34,7 @@ type TofinoControllerOptions struct {
 	CollectorServerEndpoint string
 	SampleInterval          int
 	APIPort                 string
+	LpfTimeConst            float32
 }
 
 func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
@@ -41,7 +42,7 @@ func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
 		return nil
 	}
 	driver := driver.NewTofinoDriver(options.Logger)
-	ts := trafficselector.NewTrafficSelector(options.Logger, driver)
+	ts := trafficselector.NewTrafficSelector(options.Logger, driver, options.LpfTimeConst)
 	collector := collector.NewMetricCollector(options.Logger, driver, options.SampleInterval, ts)
 	bp := bufferpool.NewBufferpool(options.Logger, driver, ts)
 	apiServer := api.NewControllerApiServer(options.Logger, options.APIPort, ts, bp)
@@ -92,20 +93,4 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	close(metricsSinkChannel)
 
 	return nil
-}
-
-func (controller *TofinoController) EnableSyncOperationOnTables() {
-	for _, tbl := range driver.PROBE_TABLES {
-		tblName := controller.driver.FindTableNameByShortName(tbl)
-		if tblName == "" {
-			controller.logger.Error("Cannot find full table name", "table", tbl)
-			continue
-		}
-		err := controller.driver.EnableSyncOperationOnRegister(tblName)
-		if err != nil {
-			controller.logger.Error("Error occured when enabling sync operation on table", "table", tbl, "err", err)
-		} else {
-			controller.logger.Info("Sync Table operation has been enabled on table", "table", tbl)
-		}
-	}
 }

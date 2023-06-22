@@ -98,7 +98,7 @@ control PfIngressEndProbe(inout {{ .IngressHeaderType }} hdr, inout pf_ingress_m
         }
     };
 
-    @name("PF_INGRESS_JITTER")
+    @name("PF_INGRESS_JITTER_AVG")
     Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE) pfJitterRegister; 
     RegisterAction<bit<64>, pf_stats_width_t, void>(pfJitterRegister) pfJitterRegisterAction = {
         void apply(inout bit<64> value) {

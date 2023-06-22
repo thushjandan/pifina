@@ -16,6 +16,7 @@ type MetricCollector struct {
 	driver         *driver.TofinoDriver
 	sampleInterval time.Duration
 	ts             *trafficselector.TrafficSelector
+	lpfTimeConst   float32
 }
 
 func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int, ts *trafficselector.TrafficSelector) *MetricCollector {
@@ -32,6 +33,11 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	if collector.ts.GetTrafficSelectorCache() == nil {
 		collector.logger.Error("Cannot start collection! Cannot retrieve sessionIds from Ingress Start Match table. Exiting.")
 		return
+	}
+
+	err := collector.ts.ConfigureLPF()
+	if err != nil {
+		collector.logger.Error("Error occured during LPF initialization", "err", err)
 	}
 
 	wg.Add(7)
@@ -209,5 +215,4 @@ func (collector *MetricCollector) CollectExtraHeaderSizeCounter(ctx context.Cont
 			return
 		}
 	}
-
 }

@@ -24,6 +24,7 @@ func main() {
 	version_flag := flag.Bool("version", false, "show version")
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
 	sample_interval := flag.Int("sample-interval-ms", 200, "Sample interval in ms. Default 100ms")
+	lpf_time_constant_int := flag.Int("lpf-time-ns", 80, "LPF time constant for computing moving average of the ingress jitter value.")
 
 	flag.Parse()
 
@@ -62,6 +63,7 @@ func main() {
 		CollectorServerEndpoint: *collector_server,
 		SampleInterval:          *sample_interval,
 		APIPort:                 *api_port,
+		LpfTimeConst:            float32(*lpf_time_constant_int),
 	}
 	controller := controller.NewTofinoController(options)
 	err = controller.StartController(ctx, &wg, *connect_timeout)
