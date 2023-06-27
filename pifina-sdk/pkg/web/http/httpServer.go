@@ -36,7 +36,17 @@ func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyF
 
 	// Create a new Mux and set the handler
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/events", s.sse.ServeHTTP)
+	mux.HandleFunc("/api/v1/events", func(w http.ResponseWriter, r *http.Request) {
+		go func() {
+			// Received Browser Disconnection
+			s.logger.Info("New client has connected")
+			<-r.Context().Done()
+			s.logger.Info("a client has disconnected")
+			return
+		}()
+
+		s.sse.ServeHTTP(w, r)
+	})
 	mux.HandleFunc("/api/v1/endpoints", s.GetEndpointsHandler)
 
 	s.server = &http.Server{

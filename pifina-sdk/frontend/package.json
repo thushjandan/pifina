@@ -34,6 +34,7 @@
 	"dependencies": {
 		"@observablehq/plot": "^0.6.7",
 		"@types/d3": "^7.4.0",
+		"@types/sharedworker": "^0.0.97",
 		"d3": "^7.8.4"
 	}
 }

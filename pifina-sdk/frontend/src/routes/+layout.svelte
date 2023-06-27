@@ -11,8 +11,10 @@
     const isHome = () => path === '/';
     const isConfig = () => path.startsWith('/config');
     const isAbout = () => path === '/about';
+    const chartDetailView = () => path === '/dashboard/detail';
 
 </script>
+{#if !chartDetailView()}
 <nav class="bg-indigo-500">
   <div class="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
     <div class="relative flex h-16 items-center justify-between">
@@ -60,5 +62,6 @@
   </div>
   {/if}
 </nav>
+{/if}
 
 <slot />

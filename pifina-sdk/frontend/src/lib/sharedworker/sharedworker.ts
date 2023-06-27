@@ -17,7 +17,7 @@ const createEventSource = (endpoint: string) => {
         return
     }
 
-    if (evtSource.url !== `https://localhost:8655/api/v1/events?stream=${endpoint}`) {
+    if (evtSource.url !== `https://localhost:8655/api/v1/events?stream=${endpoint}` || evtSource.readyState === EventSource.CLOSED) {
         evtSource.close()
         evtSource = new EventSource(`https://localhost:8655/api/v1/events?stream=${endpoint}`);
         evtSource.onmessage = evtSourceMessage;

@@ -16,6 +16,9 @@ export const PROBE_TM_ERESS_USAGE_CELLS = `PF_TM_eg_port_usage_cells`;
 export const PROBE_TM_PIPE_TOTAL_BUF_DROP = `PF_TM_pipe_total_buffer_full_drop_packets`;
 export const PROBE_TM_PIPE_IG_FULL_BUF = `PF_TM_pipe_ig_buf_full_drop_packets`;
 export const PROBE_TM_PIPE_EG_DROP_PKT = `PF_TM_pipe_eg_total_drop_packets`;
+export const Y_AXIS_NAME_BYTE_RATE = "byte/sec"
+export const Y_AXIS_NAME_PKT_RATE = "pkts/sec"
+export const Y_AXIS_NAME_TIME_MS = "ms"
 
 export const PIFINA_DEFAULT_PROBES = [
     PROBE_INGRESS_MATCH_CNT_BYTE,
@@ -26,3 +29,40 @@ export const PIFINA_DEFAULT_PROBES = [
     PROBE_EGRESS_START_CNT_PKTS,
     PROBE_EGRESS_END_CNT_BYTE
 ]
+
+export const PIFINA_PROBE_CHART_CFG = {
+    [PROBE_INGRESS_MATCH_CNT_BYTE]: {
+        yAxisName: Y_AXIS_NAME_BYTE_RATE,
+        title: "Ingress byte counter"
+    },
+    [PROBE_INGRESS_MATCH_CNT_PKT]: {
+        yAxisName: Y_AXIS_NAME_PKT_RATE,
+        title: "Ingress packet counter"
+    },
+    [PROBE_INGRESS_START_HDR_BYTE]: {
+        yAxisName: Y_AXIS_NAME_BYTE_RATE,
+        title: "Start egress byte counter"
+    },
+    [PROBE_INGRESS_END_HDR_BYTE]: {
+        yAxisName: Y_AXIS_NAME_BYTE_RATE,
+        title: "End egress byte counter"
+    },
+    [PROBE_EGRESS_START_CNT_BYTE]: {
+        yAxisName: Y_AXIS_NAME_BYTE_RATE,
+        title: "Start egress byte counter"
+    },
+    [PROBE_EGRESS_START_CNT_PKTS]: {
+        yAxisName: Y_AXIS_NAME_PKT_RATE,
+        title: "Egress packet counter"
+    },
+    [PROBE_EGRESS_END_CNT_BYTE]: {
+        yAxisName: Y_AXIS_NAME_BYTE_RATE,
+        title: "End egress byte counter"
+    },
+    [PROBE_INGRESS_JITTER]: {
+        yAxisName: Y_AXIS_NAME_TIME_MS,
+        title: "Moving average ingress jitter"
+    },
+}
+
+export const PIFINA_DEFAULT_PROBE_CHART_ORDER = [PROBE_INGRESS_MATCH_CNT_BYTE, [PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_END_CNT_BYTE], [PROBE_INGRESS_MATCH_CNT_PKT, PROBE_EGRESS_START_CNT_PKTS], [PROBE_INGRESS_START_HDR_BYTE, PROBE_INGRESS_END_HDR_BYTE], PROBE_INGRESS_JITTER]
