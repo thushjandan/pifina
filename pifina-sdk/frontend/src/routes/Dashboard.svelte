@@ -69,37 +69,82 @@
 		metricData = metricData;
 	}
 
-	let evtSource = new EventSource(`https://localhost:8655/api/v1/events?stream=${endpoints[0]}`);
-	evtSource.onmessage = evtSourceMessage;
+	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url));
+
+	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+	worker.port.onmessage = (event: MessageEvent) => {
+		let dataobj: DTOPifinaMetricItem[] = event.data;
+
+		dataobj.forEach(item => {
+			let key = `${item.metricName}${item.type}`;
+			// Check if it's a metric from a default probe
+			if (!item.metricName.startsWith("PF_")) {
+				appRegister.add(item.metricName);
+				key = item.metricName;
+			}
+			if (item.metricName.startsWith("PF_TM_")) {
+				tmMetrics.add(item.metricName)
+				key = item.metricName;
+			}
+			if (item.metricName.startsWith("PF_EXTRA")) {
+				extraProbeNames.add(item.metricName);
+				key = item.metricName;
+			}
+			// check if key exists. If not, create a new list.
+			if (!(key in metricData)) {
+				metricData[key] = [];
+			}
+			if (!sessionIds.has(item.sessionId) && !item.metricName.startsWith("PF_TM_")) {
+				sessionIds.add(item.sessionId);
+			}
+			metricData[key].push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId, type: item.type});
+		})
+
+		// Default initialization of filters
+		if (!sessionIdFilterIsDirty && selectedSessionIds.length == 0) {
+			for (const sessionId of sessionIds.values()) {
+				selectedSessionIds.push(sessionId);
+			}
+		}
+
+		// Limit series length
+		for (const mapkey in metricData) {
+			let mapKeySessioId = new Set<number>();
+			const groupBySessionId = metricData[mapkey].forEach(item => {
+				mapKeySessioId.add(item.sessionId);
+			});
+			const metricSizeLimit = (mapKeySessioId.size + 1) * 20;
+			if (metricData[mapkey].length > metricSizeLimit) {
+				metricData[mapkey].splice(0, metricData[mapkey].length - metricSizeLimit);
+			}
+		}
+		//console.log(dataobj);
+		// Force rerender
+		metricData = metricData;
+	}
 
 
 	const onEndpointChange = () => {
-		if (typeof evtSource !== "undefined") {
-			// Close previous event source
-			evtSource.close()
-		}
-		evtSource = new EventSource(`https://localhost:8655/api/v1/events?stream=${endpoints[0]}`);
-		evtSource.onmessage = evtSourceMessage;
-	}
-
-	const startEventStreaming = () => {
-		evtSource = new EventSource(`https://localhost:8655/api/v1/events?stream=${endpoints[0]}`);
-		evtSource.onmessage = evtSourceMessage;		
+		worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
 	}
 
 	const toggleEventStreaming = () => {
-		if (isEnabled && typeof evtSource !== "undefined") {
+		if (isEnabled) {
 			// Close previous event source
-			evtSource.close()
+			worker.port.postMessage({status: "CLOSE", endpoint: selectedEndpoint});
 		}
 		if (!isEnabled) {
-			startEventStreaming();
+			worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
 		}
 		isEnabled = !isEnabled;
 	}
 
 	const isMainChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.MAIN_CHARTS;
 	const isTMChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.TM_CHARTS;
+
+	const openDetailView = () => {
+		window.open("/dashboard/detail", "_blank");
+	}
 
 	const xScaleOptions: Plot.ScaleOptions = {
 		label: "Timestamp",
@@ -110,11 +155,7 @@
 			second: 'numeric'
 		})),
 	};
-	onDestroy(() => {
-		if (typeof evtSource !== 'undefined') {
-			evtSource.close();
-		}
-	});
+
 </script>
 
 <div class="grid grid-cols-4">
@@ -179,6 +220,7 @@
 		</div>
 	</div>
 	<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4 w-full">
+		<button on:click={openDetailView} class:bg-orange-600={isEnabled} class:hover:bg-orange-800={isEnabled} class:bg-green-600={!isEnabled} class:hover:bg-green-600={!isEnabled} class="text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">Open in a new window</button>
 		<h2>Start ingress byte counter</h2>
 		<Chart options={{
 			x: xScaleOptions,
@@ -307,7 +349,7 @@
 			color: {legend: true, type: "categorical"},
 			marks: [
 				Plot.line(metricData[entry], {x: "timestamp", y: "value", stroke: (d) => `${d.sessionId}`, marker: "dot"}),
-				Plot.tickY(metricData[entry], {y: "value", title: (d) => (`current: ${d.value}`), strokeWidth: 12, opacity: 0.001, stroke: (d) => `${d.sessionId}`}),
+				Plot.tip(metricData[entry], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}})),
 			]
 		}} />
 	</div>		
