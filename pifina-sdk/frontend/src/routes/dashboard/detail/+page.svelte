@@ -86,6 +86,7 @@
     <div class="mx-auto max-w-screen-2xl py-6 sm:px-6 lg:px-8">
         <div class="bg-white rounded-lg px-8 py-8 shadow-lg">
 			<div class="divide-y divide-solid">
+				{#if sessionIds.size > 0}
 				<div class="mt-2">
 					<div class="sm:col-span-1">
 						<label for="sessionIds" class="block text-sm font-medium leading-6 text-gray-900">Filter by session ID:</label>
@@ -99,8 +100,10 @@
 						</div>
 					</div>
 				</div>
+				{/if}
 				<div bind:clientWidth={cliendScreenWidth} class="mt-8 pt-4 w-full">
 					<h2>{title}</h2>
+					{#if sessionIds.size > 0}
 					<Chart options={{
 						x: xScaleOptions,
 						y: {
@@ -114,6 +117,21 @@
 							Plot.tip(metricData, Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
 						]
 					}} />
+					{:else}
+					<Chart options={{
+						x: xScaleOptions,
+						y: {
+							label: yAxisName,
+							grid: true
+						},
+						width: cliendScreenWidth,
+						color: {legend: true, type: "categorical"},
+						marks: [
+							Plot.line(metricData, {x: "timestamp", y: "value", marker: "dot"}),
+							Plot.tip(metricData, Plot.pointerX({x: "timestamp", y: "value"})),
+						]
+					}} />
+					{/if}
 				</div>
 			</div>
         </div>
