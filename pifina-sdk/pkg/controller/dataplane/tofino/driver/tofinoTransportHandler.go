@@ -50,7 +50,7 @@ func (driver *TofinoDriver) Connect(ctx context.Context, endpoint string, p4name
 			Notifications: &bfruntime.Subscribe_Notifications{
 				EnablePortStatusChangeNotifications: false,
 				EnableIdletimeoutNotifications:      true,
-				EnableLearnNotifications:            true,
+				EnableLearnNotifications:            false,
 			},
 		},
 	}
@@ -210,8 +210,10 @@ func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Enti
 	if !driver.isConnected {
 		return nil, &model.ErrNotReady{Msg: "Not connected to Tofino"}
 	}
+	ctx, cancel := context.WithTimeout(driver.ctx, 5*time.Second)
+	defer cancel()
 	// Send read request
-	readClient, err := driver.client.Read(driver.ctx, readReq)
+	readClient, err := driver.client.Read(ctx, readReq)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +246,9 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 	}
 
 	if driver.isConnected {
-		_, err := driver.client.Write(driver.ctx, &writeReq)
+		ctx, cancel := context.WithTimeout(driver.ctx, 5*time.Second)
+		defer cancel()
+		_, err := driver.client.Write(ctx, &writeReq)
 		if err != nil {
 			return err
 		}

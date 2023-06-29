@@ -88,7 +88,7 @@ func (bp *Bufferpool) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup
 		select {
 		case <-ticker.C:
 			allItems := bp.metricStorage.GetAllAndReset()
-			bp.logger.Debug("Sampled metrics", "metrics", allItems)
+			bp.logger.Trace("Sampled metrics", "metrics", allItems)
 			c <- allItems
 		case <-ctx.Done():
 			bp.logger.Info("Stopping metric sampler...")
