@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/utils"
 	"github.com/thushjandan/pifina/pkg/controller"
+	"github.com/thushjandan/pifina/pkg/debugserver"
 )
 
 func main() {
@@ -20,6 +21,7 @@ func main() {
 	bfrt_endpoint := flag.String("bfrt", "127.0.0.1:50052", "BF runtime GRPC server address (Dataplane endpoint)")
 	p4_name := flag.String("p4name", "", "Name of the P4 application. e.g. myapp")
 	collector_server := flag.String("server", "127.0.0.1:8654", "PIFINA collector address")
+	debug_server := flag.String("debug-server", "127.0.0.1:6060", "Golang debug http pprof listen address")
 	api_port := flag.String("port", ":8656", "Controller API port to listen")
 	version_flag := flag.Bool("version", false, "show version")
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
@@ -56,6 +58,13 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
+	// Start Debug server if log level is lower equals debug
+	var ds *debugserver.DebugServer
+	if logger.GetLevel() <= hclog.Debug {
+		ds := debugserver.NewDebugServer(*debug_server)
+		ds.StartDebugServer()
+	}
+
 	options := &controller.TofinoControllerOptions{
 		Logger:                  logger,
 		Endpoint:                *bfrt_endpoint,
@@ -69,6 +78,11 @@ func main() {
 	err = controller.StartController(ctx, &wg, *connect_timeout)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)
+	}
+
+	// Shutdown Debug Server if existed
+	if ds != nil {
+		ds.ShutdownDebugServer()
 	}
 
 	// Block until a termination signal has received and all threads gracefully shutdown
