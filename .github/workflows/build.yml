@@ -32,10 +32,18 @@ jobs:
       run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
     - name: Copy BFRT proto file
-      run: echo "${{ vars.PF_BFRT_PROTO_SRC }}" > internal/dataplane/tofino/protos/bfrt.proto
+      run: echo "$PF_BFRT_PROTO_SRC" > internal/dataplane/tofino/protos/bfrt.proto
+      env:
+        PF_BFRT_PROTO_SRC: ${{ vars.PF_BFRT_PROTO_SRC }}
 
     - name: test
       run: cat internal/dataplane/tofino/protos/bfrt.proto
+
+    - name: Generate self-signed cert
+      run: >-
+        openssl req -x509 -newkey  ec -pkeyopt ec_paramgen_curve:prime256v1
+        -keyout assets/key.pem -out assets/cert.pem -sha256 -days 3650 -nodes
+        -subj "/C=CH/O=Pifina/CN=PifinaServer"
 
     - name: Build Pifina proto
       run: >- 
