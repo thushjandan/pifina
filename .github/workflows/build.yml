@@ -31,6 +31,6 @@ jobs:
     - name: Build Pifina proto
       run: >- 
         protoc --go_opt=Mpifina.proto=pifina/
-	      --go_out=./pkg/model/protos/pifina/ \
-	      --proto_path=./pkg/model/protos/ \
-	      ./pkg/model/protos/pifina.proto
+        --go_out=./pkg/model/protos/pifina/
+        --proto_path=./pkg/model/protos/
+        ./pkg/model/protos/pifina.proto
