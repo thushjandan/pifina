@@ -18,15 +18,24 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.20
+        go-version: '1.20'
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
 
+    - name: Install protobuf-golang plugin
+      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+
+    - name: Install protobuf-golang-grpc plugin
+      run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+
     - name: Copy BFRT proto file
       run: echo "${{ vars.PF_BFRT_PROTO_SRC }}" > internal/dataplane/tofino/protos/bfrt.proto
+
+    - name: test
+      run: cat internal/dataplane/tofino/protos/bfrt.proto
 
     - name: Build Pifina proto
       run: >- 
