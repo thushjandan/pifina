@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/r3labs/sse/v2"
+	"github.com/thushjandan/pifina"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/web/endpoints"
 )
@@ -28,6 +29,9 @@ func NewPifinaHttpServer(logger hclog.Logger, ed *endpoints.PifinaEndpointDirect
 }
 
 func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyFile string, certFile string, telemetryChannel chan *model.TelemetryMessage) {
+	assets, _ := pifina.Assets()
+	fs := http.FileServer(http.FS(assets))
+
 	s.sse = sse.New()
 	// Disable Replay feature from SSE
 	s.sse.AutoReplay = false
@@ -48,6 +52,8 @@ func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyF
 		s.sse.ServeHTTP(w, r)
 	})
 	mux.HandleFunc("/api/v1/endpoints", s.GetEndpointsHandler)
+
+	mux.Handle("/", http.StripPrefix("/", fs))
 
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
