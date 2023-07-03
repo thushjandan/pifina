@@ -24,6 +24,19 @@ jobs:
 
     - name: Install Protoc
       uses: arduino/setup-protoc@v2
+  
+    - name: Setup Node.js 18
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+
+    - name: Install webapp dependencies
+      run: npm ci
+      working-directory: ./pifina-sdk/frontend
+
+    - name: Build frontend
+      run: npm run build
+      working-directory: ./pifina-sdk/frontend
 
     - name: Install protobuf-golang plugin
       run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
