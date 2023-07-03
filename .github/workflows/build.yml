@@ -1,0 +1,36 @@
+---
+name: Build Pifina binaries
+
+on:
+  push:
+    #branches: [ $default-branch ]
+  pull_request:
+    branches: [ $default-branch ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./pifina-sdk
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.20
+
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v2
+
+    - name: Copy BFRT proto file
+      run: echo "${{ vars.PF_BFRT_PROTO_SRC }}" > internal/dataplane/tofino/protos/bfrt.proto
+
+    - name: Build Pifina proto
+      run: >- 
+        protoc --go_opt=Mpifina.proto=pifina/
+	      --go_out=./pkg/model/protos/pifina/ \
+	      --proto_path=./pkg/model/protos/ \
+	      ./pkg/model/protos/pifina.proto
