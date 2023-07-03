@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -53,7 +56,18 @@ func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyF
 	})
 	mux.HandleFunc("/api/v1/endpoints", s.GetEndpointsHandler)
 
-	mux.Handle("/", http.StripPrefix("/", fs))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			f, err := assets.Open(strings.TrimPrefix(path.Clean(r.URL.Path), "/"))
+			if err == nil {
+				defer f.Close()
+			}
+			if os.IsNotExist(err) {
+				r.URL.Path = "/"
+			}
+		}
+		fs.ServeHTTP(w, r)
+	})
 
 	s.server = &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
