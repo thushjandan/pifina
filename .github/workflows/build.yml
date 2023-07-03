@@ -31,13 +31,13 @@ jobs:
     - name: Install protobuf-golang-grpc plugin
       run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
 
-    - name: Copy BFRT proto file
-      run: echo "$PF_BFRT_PROTO_SRC" > internal/dataplane/tofino/protos/bfrt.proto
+    - name: Install app dependencies
+      run: go mod download
+
+    - name: Create BFRT proto file
+      run: echo "$PF_BFRT_PROTO_SRC" > internal/dataplane/tofino/protos/bfruntime.proto
       env:
         PF_BFRT_PROTO_SRC: ${{ vars.PF_BFRT_PROTO_SRC }}
-
-    - name: test
-      run: cat internal/dataplane/tofino/protos/bfrt.proto
 
     - name: Generate self-signed cert
       run: >-
@@ -51,3 +51,24 @@ jobs:
         --go_out=./pkg/model/protos/pifina/
         --proto_path=./pkg/model/protos/
         ./pkg/model/protos/pifina.proto
+
+    - name: Build BFRT proto
+      run: >- 
+        protoc --go-grpc_opt=Mbfruntime.proto=bfruntime/ 
+        --go_opt=Mbfruntime.proto=bfruntime/ 
+        --go_out=./internal/dataplane/tofino/protos 
+        --go-grpc_out=./internal/dataplane/tofino/protos 
+        --proto_path=./internal/dataplane/tofino/protos
+        ./internal/dataplane/tofino/protos/bfruntime.proto
+
+    - name: Run Unit tests
+      run: go test -v ./...
+
+    - name: Build pifina control plane binary
+      run: go build -o pifina-cp cmd/pifina-cp/main.go
+
+    - name: Build pifina web binary
+      run: go build -o pifina-web cmd/pifina-web/main.go
+
+    - name: Build pifina cli binary
+      run: go build -o pifina-cli cmd/pifina-cli/main.go
