@@ -4,6 +4,8 @@ __pycache__
 # Build folders
 build*/
 
+pifina-sdk/dist/
+
 # Logs folders
 logs/
 

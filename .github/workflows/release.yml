@@ -1,0 +1,89 @@
+name: goreleaser
+
+on:
+  push:
+    # run only against tags
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    needs: build
+    defaults:
+      run:
+        working-directory: ./pifina-sdk
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - run: git fetch --force --tags
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: stable
+    
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v2
+    
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      - name: Install webapp dependencies
+        run: npm ci
+        working-directory: ./pifina-sdk/frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./pifina-sdk/frontend
+
+      - name: Install protobuf-golang plugin
+        run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+
+      - name: Install protobuf-golang-grpc plugin
+        run: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+
+      - name: Install app dependencies
+        run: go mod download
+
+      - name: Create BFRT proto file
+        run: echo "$PF_BFRT_PROTO_SRC" > internal/dataplane/tofino/protos/bfruntime.proto
+        env:
+          PF_BFRT_PROTO_SRC: ${{ vars.PF_BFRT_PROTO_SRC }}
+
+      - name: Generate self-signed cert
+        run: >-
+          openssl req -x509 -newkey  ec -pkeyopt ec_paramgen_curve:prime256v1
+          -keyout assets/key.pem -out assets/cert.pem -sha256 -days 3650 -nodes
+          -subj "/C=CH/O=Pifina/CN=PifinaServer"
+
+      - name: Build Pifina proto
+        run: >- 
+          protoc --go_opt=Mpifina.proto=pifina/
+          --go_out=./pkg/model/protos/pifina/
+          --proto_path=./pkg/model/protos/
+          ./pkg/model/protos/pifina.proto
+
+      - name: Build BFRT proto
+        run: >- 
+          protoc --go-grpc_opt=Mbfruntime.proto=bfruntime/ 
+          --go_opt=Mbfruntime.proto=bfruntime/ 
+          --go_out=./internal/dataplane/tofino/protos 
+          --go-grpc_out=./internal/dataplane/tofino/protos 
+          --proto_path=./internal/dataplane/tofino/protos
+          ./internal/dataplane/tofino/protos/bfruntime.proto
+
+      - uses: goreleaser/goreleaser-action@v4
+        with:
+          # either 'goreleaser' (default) or 'goreleaser-pro':
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
