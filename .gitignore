@@ -13,3 +13,4 @@ logs/
 
 bfruntime*pb.go
 pifina*pb.go
+bfruntime.proto
