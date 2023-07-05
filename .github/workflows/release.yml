@@ -78,5 +78,6 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --clean
+          workdir: ./pifina-sdk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
