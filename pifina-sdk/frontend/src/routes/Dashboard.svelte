@@ -2,10 +2,10 @@
 	import Chart from '../lib/components/Chart.svelte';
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG, PROBE_EGRESS_END_CNT_BYTE, PROBE_EGRESS_START_CNT_BYTE, PROBE_EGRESS_START_CNT_PKTS, PROBE_INGRESS_END_HDR_BYTE, PROBE_INGRESS_JITTER, PROBE_INGRESS_MATCH_CNT_BYTE, PROBE_INGRESS_MATCH_CNT_PKT, PROBE_INGRESS_START_HDR_BYTE, PROBE_TM_EGRESS_DROP_PKT, PROBE_TM_ERESS_USAGE_CELLS, PROBE_TM_INGRESS_DROP_PKT, PROBE_TM_INRESS_USAGE_CELLS, PROBE_TM_PIPE_EG_DROP_PKT, PROBE_TM_PIPE_IG_FULL_BUF, PROBE_TM_PIPE_TOTAL_BUF_DROP } from '$lib/models/metricNames';
-	import { onDestroy } from 'svelte';
+	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG } from '$lib/models/metricNames';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
 	import TmMetricCharts from '$lib/components/TMMetricCharts.svelte';
+
     export let endpoints: string[];
 
 	let clientFullScreenWidth;
@@ -98,7 +98,7 @@
 	const isExtraProbesChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.EXTRA_PROBES_CHARTS;
 
 	const openDetailView = (metricName: string) => {
-		window.open(`/dashboard/detail?selectedMetric=${metricName}`, "_blank");
+		window.open(`/dashboard/detail?endpoint=${selectedEndpoint}&selectedMetric=${metricName}`, "_blank");
 	}
 
 	const xScaleOptions: Plot.ScaleOptions = {

@@ -6,6 +6,7 @@
 	import { PIFINA_PROBE_CHART_CFG, Y_AXIS_NAME_BYTE_RATE } from "$lib/models/metricNames";
 
 	let selectedMetric = $page.url.searchParams.get('selectedMetric') || "";
+	let selectedEndpoint = $page.url.searchParams.get('endpoint') || "";
 	let metricData: MetricItem[] = [];
 	let sessionIds = new Set<number>();
 	let selectedSessionIds: number[] = [];
@@ -13,7 +14,7 @@
 
 	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
-	worker.port.postMessage({status: "CONNECT", endpoint: "tofino-dev"});
+	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
 	worker.port.onmessage = (event) => {
 		let dataobj: DTOPifinaMetricItem[] = event.data;
 
