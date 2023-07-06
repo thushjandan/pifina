@@ -11,7 +11,7 @@
 	let selectedSessionIds: number[] = [];
 	let sessionIdFilterIsDirty = false;
 
-	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url));
+	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
 	worker.port.postMessage({status: "CONNECT", endpoint: "tofino-dev"});
 	worker.port.onmessage = (event) => {

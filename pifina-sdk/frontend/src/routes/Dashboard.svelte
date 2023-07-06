@@ -21,7 +21,7 @@
 	let selectedChartCategory = ChartMenuCategoryModel.MAIN_CHARTS;
 	let isEnabled = true;
 
-	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url));
+	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
 	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
 	worker.port.onmessage = (event: MessageEvent) => {
