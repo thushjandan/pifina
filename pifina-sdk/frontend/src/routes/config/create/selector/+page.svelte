@@ -6,7 +6,7 @@
 	import type { SelectorEntry } from "$lib/models/SelectorEntry";
 
     let schemaPromise = Promise.resolve<SelectorSchema[]>([]);
-    let localEndpointAddress: URL;
+    let localEndpointAddress: string;
     let newEntry: SelectorEntry = {sessionId: 0, keys: []} as SelectorEntry;
     const hexRegex = /^[0-9A-Fa-f]+$/g;
     let createLoading= false;
@@ -14,16 +14,8 @@
     let createErrorMsg = "";
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
-        let url: URL;
-        try {
-            url = new URL(val);
-        } catch(error) {
-            goto(`/config`);
-            return;
-        }
-        localEndpointAddress = url;
-        url.pathname = '/api/v1/schema';
-        schemaPromise = fetch(`${url.href}`).then(response => response.json().then((data: SelectorSchema[]) => {
+        localEndpointAddress = val;
+        schemaPromise = fetch(`/api/v1/schema?endpoint=${localEndpointAddress}`).then(response => response.json().then((data: SelectorSchema[]) => {
             data = data.filter(elem => elem.name !== FIELD_MATCH_PRIORITY);
             newEntry.keys = [];
             data.forEach(item => {
@@ -50,8 +42,7 @@
                 return
             }
         }
-        localEndpointAddress.pathname = '/api/v1/selectors'
-        fetch(localEndpointAddress.href, {
+        fetch(`/api/v1/selectors?endpoint=${localEndpointAddress}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

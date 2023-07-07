@@ -5,7 +5,7 @@
 	import { goto } from "$app/navigation";
 	import type { AppRegisterModel } from "$lib/models/AppRegister";
 
-    let localEndpointAddress: URL;
+    let localEndpointAddress: string;
     let appRegPromise: Promise<AppRegisterModel[]>;
     let showModal = false;
     let targetAppRegisterToDelete: AppRegisterModel;
@@ -13,20 +13,12 @@
     let closeModal: (() => void);
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
-        let url: URL;
-        try {
-            url = new URL(val);
-        } catch(error) {
-            endpointAddress.set("");
-            return;
-        }
-        localEndpointAddress = url;
+        localEndpointAddress = val;
         fetchEntries();
     });
 
     function fetchEntries() {
-        localEndpointAddress.pathname = '/api/v1/app-registers';
-        appRegPromise = fetch(`${localEndpointAddress.href}`).then(response => response.json());
+        appRegPromise = fetch(`/api/v1/app-registers?endpoint=${localEndpointAddress}`).then(response => response.json());
     }
 
     function showConfirmModal(entry: AppRegisterModel) {
@@ -38,8 +30,7 @@
         if (typeof targetAppRegisterToDelete !== 'undefined') {
             loading = true;
             let url = localEndpointAddress;
-            url.pathname = '/api/v1/app-registers';
-            fetch(localEndpointAddress.href, {
+            fetch(`/api/v1/app-registers?endpoint=${localEndpointAddress}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -112,4 +103,10 @@
         {/if}
     </button>
 </Modal>
+{:catch error}
+<div class="relative overflow-x-auto mt-8">
+    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+        <span class="font-medium">Controller unreachable</span> Cannot retrieve app register information from controller.
+    </div>
+</div>
 {/await}

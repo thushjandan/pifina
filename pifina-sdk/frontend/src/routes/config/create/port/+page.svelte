@@ -5,34 +5,24 @@
 	import { fade } from "svelte/transition";
 	import type { DevPortModel } from "$lib/models/DevPortModel";
 
-    let localEndpointAddress: URL;
+    let localEndpointAddress: string;
     let newEntry: DevPortModel = {name: ""} as DevPortModel;
     let availableRegPromise: Promise<DevPortModel[]>;
     let loading= false;
     let createDone = false;
     let createErrorMsg = "";
     let showModal = false;
-    let closeModal: (() => void);
 
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
-        let url: URL;
-        try {
-            url = new URL(val);
-        } catch(error) {
-            goto(`/config`);
-            return;
-        }
-        localEndpointAddress = url;
-        url.pathname = '/api/v1/ports/available';
-        availableRegPromise = fetch(`${url.href}`).then(response => response.json());
+        localEndpointAddress = val;
+        availableRegPromise = fetch(`/api/v1/ports/available?endpoint=${localEndpointAddress}`).then(response => response.json());
     });
 
     function handleSubmit() {
         loading = true;
         createErrorMsg = "";
-        localEndpointAddress.pathname = '/api/v1/ports'
-        fetch(localEndpointAddress.href, {
+        fetch(`/api/v1/ports?endpoint=${localEndpointAddress}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

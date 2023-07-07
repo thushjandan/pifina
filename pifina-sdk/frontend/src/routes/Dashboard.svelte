@@ -5,12 +5,13 @@
 	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG } from '$lib/models/metricNames';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
 	import TmMetricCharts from '$lib/components/TMMetricCharts.svelte';
+	import type { EndpointModel } from '$lib/models/EndpointModel';
 
-    export let endpoints: string[];
+    export let endpoints: EndpointModel[];
 
 	let clientFullScreenWidth;
 	let clientHalfScreenWidth;
-    let selectedEndpoint: string = endpoints[0];
+    let selectedEndpoint: EndpointModel = endpoints[0];
 	let sessionIds = new Set<number>();
 	let selectedSessionIds: number[] = [];
 	let sessionIdFilterIsDirty = false;
@@ -23,7 +24,7 @@
 
 	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
-	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint.name});
 	worker.port.onmessage = (event: MessageEvent) => {
 		let dataobj: DTOPifinaMetricItem[] = event.data;
 
@@ -78,16 +79,16 @@
 
 
 	const onEndpointChange = () => {
-		worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+		worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint.name});
 	}
 
 	const toggleEventStreaming = () => {
 		if (isEnabled) {
 			// Close previous event source
-			worker.port.postMessage({status: "CLOSE", endpoint: selectedEndpoint});
+			worker.port.postMessage({status: "CLOSE", endpoint: selectedEndpoint.name});
 		}
 		if (!isEnabled) {
-			worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+			worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint.name});
 		}
 		isEnabled = !isEnabled;
 	}
@@ -98,7 +99,7 @@
 	const isExtraProbesChartSelected = () => selectedChartCategory == ChartMenuCategoryModel.EXTRA_PROBES_CHARTS;
 
 	const openDetailView = (metricName: string) => {
-		window.open(`/dashboard/detail?endpoint=${selectedEndpoint}&selectedMetric=${metricName}`, "_blank");
+		window.open(`/dashboard/detail?endpoint=${selectedEndpoint.name}&selectedMetric=${metricName}`, "_blank");
 	}
 
 	const xScaleOptions: Plot.ScaleOptions = {
@@ -117,9 +118,9 @@
 	<div class="sm:col-span-1">
 		<label for="target" class="block text-sm font-medium leading-6 text-gray-900">Choose a monitoring target:</label>
 		<div class="mt-2">
-			<select bind:value={selectedEndpoint} on:change={onEndpointChange} name="target" class="px-3 py-3 placeholder-slate-300 text-slate-600 relative bg-white bg-white rounded text-sm border-0 shadow outline-none focus:outline-none focus:ring w-full">
+			<select bind:value={selectedEndpoint.name} on:change={onEndpointChange} name="target" class="px-3 py-3 placeholder-slate-300 text-slate-600 relative bg-white bg-white rounded text-sm border-0 shadow outline-none focus:outline-none focus:ring w-full">
 				{#each endpoints as endpoint }
-				<option value={endpoint}>{endpoint}</option>
+				<option value={endpoint.name}>{endpoint.name}</option>
 				{/each}
 			</select>
 		</div>

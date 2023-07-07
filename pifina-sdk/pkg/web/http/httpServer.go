@@ -59,7 +59,9 @@ func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyF
 	mux.HandleFunc("/api/v1/selectors", s.HandleProxyRequest)
 	mux.HandleFunc("/api/v1/schema", s.HandleProxyRequest)
 	mux.HandleFunc("/api/v1/app-registers", s.HandleProxyRequest)
+	mux.HandleFunc("/api/v1/app-registers/", s.HandleProxyRequest)
 	mux.HandleFunc("/api/v1/ports", s.HandleProxyRequest)
+	mux.HandleFunc("/api/v1/ports/", s.HandleProxyRequest)
 
 	// Static website handler for svelte frontend webapp
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

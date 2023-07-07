@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onDestroy } from "svelte";
 	import { endpointAddress } from "./EndpointStore";
-	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_EXACT, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/SelectorSchema";
-	import type { SelectorEntry, SelectorKey } from "$lib/models/SelectorEntry";
+	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/SelectorSchema";
+	import type { SelectorEntry } from "$lib/models/SelectorEntry";
 	import { goto } from "$app/navigation";
 	import Modal from "$lib/components/Modal.svelte";
 
-    let localEndpointAddress: URL;
+    let localEndpointAddress: string;
     let endpointPromise = Promise.resolve<SelectorEntry[]>([]);
     let matchSelectorSchema: SelectorSchema[] = [];
     let loading = false;
@@ -15,22 +15,13 @@
     let targetRuleToDelete: SelectorEntry;
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
-        let url: URL;
-        try {
-            url = new URL(val);
-        } catch(error) {
-            endpointAddress.set("");
-            return;
-        }
-        localEndpointAddress = url;
-        url.pathname = '/api/v1/schema';
-        fetch(`${url.href}`).then(response => response.json().then(data => matchSelectorSchema = data.filter((elem: SelectorSchema) => elem.name !== FIELD_MATCH_PRIORITY)));
+        localEndpointAddress = val;
+        fetch(`/api/v1/schema?endpoint=${localEndpointAddress}`).then(response => response.json().then(data => matchSelectorSchema = data.filter((elem: SelectorSchema) => elem.name !== FIELD_MATCH_PRIORITY)));
         fetchEntries();
     });
 
     function fetchEntries() {
-        localEndpointAddress.pathname = '/api/v1/selectors';
-        endpointPromise = fetch(`${localEndpointAddress.href}`).then(response => response.json());
+        endpointPromise = fetch(`/api/v1/selectors?endpoint=${localEndpointAddress}`).then(response => response.json());
     }
 
     function showConfirmModal(entry: SelectorEntry) {
@@ -41,9 +32,7 @@
     function deleteRule() {
         if (typeof targetRuleToDelete !== 'undefined') {
             loading = true;
-            let url = localEndpointAddress;
-            url.pathname = '/api/v1/selectors';
-            fetch(localEndpointAddress.href, {
+            fetch(`/api/v1/selectors?endpoint=${localEndpointAddress}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -138,4 +127,10 @@
         {/if}
     </button>
 </Modal>
+{:catch error}
+<div class="relative overflow-x-auto mt-8">
+    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+        <span class="font-medium">Controller unreachable</span> Cannot retrieve traffic selector information from controller.
+    </div>
+</div>
 {/await}

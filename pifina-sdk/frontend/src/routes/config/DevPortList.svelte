@@ -5,7 +5,7 @@
 	import { goto } from "$app/navigation";
 	import type { DevPortModel } from "$lib/models/DevPortModel";
 
-    let localEndpointAddress: URL;
+    let localEndpointAddress: string;
     let devPortPromise: Promise<DevPortModel[]>;
     let showModal = false;
     let targetPortToDelete: DevPortModel;
@@ -13,20 +13,12 @@
     let closeModal: (() => void);
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
-        let url: URL;
-        try {
-            url = new URL(val);
-        } catch(error) {
-            endpointAddress.set("");
-            return;
-        }
-        localEndpointAddress = url;
+        localEndpointAddress = val;
         fetchEntries();
     });
 
     function fetchEntries() {
-        localEndpointAddress.pathname = '/api/v1/ports';
-        devPortPromise = fetch(`${localEndpointAddress.href}`).then(response => response.json());
+        devPortPromise = fetch(`/api/v1/ports?endpoint=${localEndpointAddress}`).then(response => response.json());
     }
 
     function showConfirmModal(entry: DevPortModel) {
@@ -37,9 +29,7 @@
     function deleteProbe() {
         if (typeof targetPortToDelete !== 'undefined') {
             loading = true;
-            let url = localEndpointAddress;
-            url.pathname = '/api/v1/ports';
-            fetch(localEndpointAddress.href, {
+            fetch(`/api/v1/ports?endpoint=${localEndpointAddress}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -110,4 +100,10 @@
         {/if}
     </button>
 </Modal>
+{:catch error}
+<div class="relative overflow-x-auto mt-8">
+    <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+        <span class="font-medium">Controller unreachable</span> Cannot retrieve port information from controller.
+    </div>
+</div>
 {/await}

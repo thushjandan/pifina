@@ -5,7 +5,7 @@
 	import { goto } from "$app/navigation";
 	import { fade } from "svelte/transition";
 
-    let localEndpointAddress: URL;
+    let localEndpointAddress: string;
     let newEntry: AppRegisterModel = {index: 0, name: ""} as AppRegisterModel;
     let availableRegPromise: Promise<string[]>;
     let loading= false;
@@ -14,23 +14,14 @@
     let showModal = false;
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
-        let url: URL;
-        try {
-            url = new URL(val);
-        } catch(error) {
-            goto(`/config`);
-            return;
-        }
-        localEndpointAddress = url;
-        url.pathname = '/api/v1/app-registers/available';
-        availableRegPromise = fetch(`${url.href}`).then(response => response.json());
+        localEndpointAddress = val;
+        availableRegPromise = fetch(`/api/v1/app-registers/available?endpoint=${localEndpointAddress}`).then(response => response.json());
     });
 
     function handleSubmit() {
         loading = true;
         createErrorMsg = "";
-        localEndpointAddress.pathname = '/api/v1/app-registers'
-        fetch(localEndpointAddress.href, {
+        fetch(`/api/v1/app-registers?endpoint=${localEndpointAddress}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

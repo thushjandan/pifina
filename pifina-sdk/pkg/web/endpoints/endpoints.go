@@ -10,9 +10,9 @@ type void struct{}
 var member void
 
 type PifinaEndpoint struct {
-	Name    string
-	Address net.IP
-	Port    int
+	Name    string `json:"name"`
+	Address net.IP `json:"address"`
+	Port    int    `json:"port"`
 }
 
 type PifinaEndpointDirectory struct {
@@ -51,11 +51,11 @@ func (e *PifinaEndpointDirectory) Update(endpoint string, address net.IP, port i
 	return ok
 }
 
-func (e *PifinaEndpointDirectory) GetAll() []string {
-	endpointList := make([]string, 0)
+func (e *PifinaEndpointDirectory) GetAll() []*PifinaEndpoint {
+	endpointList := make([]*PifinaEndpoint, 0)
 	e.lock.RLock()
 	for key := range e.endpoints {
-		endpointList = append(endpointList, key)
+		endpointList = append(endpointList, e.endpoints[key])
 	}
 	e.lock.RUnlock()
 
