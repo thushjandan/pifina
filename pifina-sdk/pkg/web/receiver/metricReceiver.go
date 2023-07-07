@@ -42,7 +42,7 @@ func (r *MetricReceiver) StartServer(ctx context.Context, port string, telemetry
 				return
 			}
 
-			n, _, err := r.conn.ReadFromUDP(buf)
+			n, clientAddr, err := r.conn.ReadFromUDP(buf)
 			if err != nil {
 				// If termination signal has received, terminate udp server.
 				if context.Cause(ctx) != nil {
@@ -65,7 +65,7 @@ func (r *MetricReceiver) StartServer(ctx context.Context, port string, telemetry
 				MetricList: metricList,
 			}
 			if len(metricList) > 0 {
-				r.ed.Set(protoTelemetryMsg.SourceHost)
+				r.ed.Set(protoTelemetryMsg.SourceHost, clientAddr.IP)
 				telemetryChannel <- telemetryMessage
 			}
 		}

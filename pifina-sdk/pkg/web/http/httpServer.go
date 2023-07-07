@@ -54,8 +54,14 @@ func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyF
 
 		s.sse.ServeHTTP(w, r)
 	})
-	mux.HandleFunc("/api/v1/endpoints", s.GetEndpointsHandler)
+	mux.HandleFunc("/api/v1/endpoints", s.HandleEndpointRequest)
+	// Proxy requests to controller
+	mux.HandleFunc("/api/v1/selectors", s.HandleProxyRequest)
+	mux.HandleFunc("/api/v1/schema", s.HandleProxyRequest)
+	mux.HandleFunc("/api/v1/app-registers", s.HandleProxyRequest)
+	mux.HandleFunc("/api/v1/ports", s.HandleProxyRequest)
 
+	// Static website handler for svelte frontend webapp
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			f, err := assets.Open(strings.TrimPrefix(path.Clean(r.URL.Path), "/"))

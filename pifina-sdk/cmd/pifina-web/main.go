@@ -21,6 +21,7 @@ func main() {
 	logLevel := flag.String("level", "info", "set the log level. The default is info. Possible options: trace, debug, info, warn, error, off")
 	listen_metric_port := flag.String("collector", "8654", "PIFINA metric port to listen")
 	listen_web_port := flag.String("web", "8655", "PIFINA web port to listen")
+	controller_api_port := flag.Int("controller", 8656, "Default PIFINA controller API port to connect")
 	keyFile := flag.String("key", "assets/key.pem", "TLS private key file path")
 	certFile := flag.String("cert", "assets/cert.pem", "TLS certificate file path")
 	version_flag := flag.Bool("version", false, "show version")
@@ -44,7 +45,7 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
-	endpointDirectory := endpoints.NewPifinaEndpointDirectory()
+	endpointDirectory := endpoints.NewPifinaEndpointDirectory(*controller_api_port)
 
 	telemetryChannel := make(chan *model.TelemetryMessage)
 
