@@ -15,6 +15,9 @@
     let targetRuleToDelete: SelectorEntry;
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
+        if (val === "") {
+            return
+        }
         localEndpointAddress = val;
         fetch(`/api/v1/schema?endpoint=${localEndpointAddress}`).then(response => response.json().then(data => matchSelectorSchema = data.filter((elem: SelectorSchema) => elem.name !== FIELD_MATCH_PRIORITY)));
         fetchEntries();

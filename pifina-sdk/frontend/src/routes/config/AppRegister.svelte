@@ -13,6 +13,9 @@
     let closeModal: (() => void);
 
     const endpointAddrSub = endpointAddress.subscribe(val => {
+        if (val === "") {
+            return
+        }
         localEndpointAddress = val;
         fetchEntries();
     });

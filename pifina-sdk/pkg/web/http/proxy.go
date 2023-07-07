@@ -70,6 +70,7 @@ func (s *PifinaHttpServer) HandleProxyRequest(rw http.ResponseWriter, r *http.Re
 	if err != nil {
 		http.Error(rw, "Server Error", http.StatusInternalServerError)
 		s.logger.Error("Proxy API request failed", "remoteAddr", r.RemoteAddr, "url", r.URL, "err", err)
+		return
 	}
 	defer resp.Body.Close()
 

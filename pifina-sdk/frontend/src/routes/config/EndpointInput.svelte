@@ -13,14 +13,18 @@
     }
 
     function editEndpoint(endpoint: EndpointModel) {
-        editEndpointEntity = endpoint;
+        editEndpointEntity = {
+            name: endpoint.name,
+            address: endpoint.address,
+            port: endpoint.port
+        }
         editModeEnabled = true;
     }
 
     function submitEditEndpoint() {
         editModeEnabled = false;
         loading = true;
-        
+
         fetch(`/api/v1/endpoints`, {
             method: 'PUT',
             headers: {
