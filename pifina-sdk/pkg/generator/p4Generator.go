@@ -14,10 +14,51 @@ import (
 var p4CodeTemplate embed.FS
 
 const (
-	P4_TEMPLATE_DIR     = "template"
-	P4_HEADER_FILE_NAME = "p4Header.tpl"
-	P4_APP_FILE_NAME    = "p4App.tpl"
+	P4_TEMPLATE_DIR       = "template"
+	P4_HEADER_FILE_NAME   = "p4Header.tpl"
+	P4_APP_FILE_NAME      = "p4App.tpl"
+	P4_SKELETON_FILE_NAME = "p4SkeletonApp.tpl"
 )
+
+// Generate a basic skeleton P4 file in a new folder
+func GenerateSkeleton(logger hclog.Logger, templateOptions *model.P4CodeTemplate, outputDir string) error {
+	// Create new app folder
+	pfSkeletonFolderPath := filepath.Join(outputDir, "myp4app_with_pifina")
+	if err := os.Mkdir(pfSkeletonFolderPath, os.ModePerm); err != nil {
+		return err
+	}
+
+	p4SkeletonTemplate, err := template.New(P4_SKELETON_FILE_NAME).ParseFS(
+		p4CodeTemplate,
+		filepath.Join(P4_TEMPLATE_DIR, P4_SKELETON_FILE_NAME),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	pfSkeletonFilePath := filepath.Join(pfSkeletonFolderPath, "myp4app_with_pifina.p4")
+	pfSkeletonFileHandle, err := os.Create(pfSkeletonFilePath)
+	if err != nil {
+		return err
+	}
+	defer pfSkeletonFileHandle.Close()
+
+	// Parse p4 header template file
+	if err = p4SkeletonTemplate.Execute(pfSkeletonFileHandle, templateOptions); err != nil {
+		return err
+	}
+
+	logger.Info("P4 skeleton file has been successfully generated!", "file", pfSkeletonFilePath)
+
+	// Create new includes folder
+	includesFolderPath := filepath.Join(pfSkeletonFolderPath, "include")
+	if err := os.Mkdir(includesFolderPath, os.ModePerm); err != nil {
+		return err
+	}
+	// Generate Pifina probe files
+	return GenerateP4App(logger, templateOptions, includesFolderPath)
+}
 
 func GenerateP4App(logger hclog.Logger, templateOptions *model.P4CodeTemplate, outputDir string) error {
 	p4HeaderTemplate, err := template.New(P4_HEADER_FILE_NAME).ParseFS(

@@ -74,6 +74,11 @@ Following match types can be used: exact, ternary, lpm`,
 						Value: 0,
 						Usage: "Count of additional egress probes",
 					},
+					&cli.BoolFlag{
+						Name:  "gen-skeleton",
+						Value: false,
+						Usage: "If true, a basic skeleton of a P4 program with PIFINA will be generated.",
+					},
 				},
 				Action: createAction,
 			},
@@ -170,7 +175,15 @@ func createAction(cCtx *cli.Context) error {
 
 	logger.Info("Generating files...")
 	// Generator template
-	err := generator.GenerateP4App(logger, templateOptions, outputDir)
+	var err error
+	if cCtx.Bool("gen-skeleton") {
+		// Generate a skeleton in a new folder
+		err = generator.GenerateSkeleton(logger, templateOptions, outputDir)
+	} else {
+		// Just generate pifina files.
+		err = generator.GenerateP4App(logger, templateOptions, outputDir)
+	}
+
 	if err != nil {
 		logger.Error("Error occured!", "err", err)
 		os.Exit(1)
