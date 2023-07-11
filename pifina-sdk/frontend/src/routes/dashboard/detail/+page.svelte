@@ -4,6 +4,7 @@
 	import { page } from '$app/stores';
 	import type { DTOPifinaMetricItem, MetricItem } from "$lib/models/MetricItem";
 	import { PIFINA_PROBE_CHART_CFG, Y_AXIS_NAME_BYTE_RATE } from "$lib/models/metricNames";
+	import { PifinaMetricName } from "$lib/models/metricTypes";
 
 	let selectedMetric = $page.url.searchParams.get('selectedMetric') || "";
 	let selectedEndpoint = $page.url.searchParams.get('endpoint') || "";
@@ -33,6 +34,12 @@
 			if (selectedMetric === key) {
 				if (!sessionIds.has(item.sessionId) && !item.metricName.startsWith("PF_TM_")) {
 					sessionIds.add(item.sessionId);
+				}
+				// Convert nano seconds to miliseconds
+				if (item.metricName == PifinaMetricName.INGRESS_JITTER_AVG) {
+					if (item.value > 0) {
+						item.value = item.value / 1000;
+					}
 				}
 				metricData.push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId, type: item.type});
 			}

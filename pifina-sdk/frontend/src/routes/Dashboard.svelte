@@ -2,10 +2,11 @@
 	import Chart from '../lib/components/Chart.svelte';
 	import * as Plot from "@observablehq/plot";
 	import type { DTOPifinaMetricItem, MetricData } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG } from '$lib/models/metricNames';
+	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG, PROBE_INGRESS_JITTER } from '$lib/models/metricNames';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
 	import TmMetricCharts from '$lib/components/TMMetricCharts.svelte';
 	import type { EndpointModel } from '$lib/models/EndpointModel';
+	import { PifinaMetricName } from '$lib/models/metricTypes';
 
     export let endpoints: EndpointModel[];
 
@@ -49,6 +50,12 @@
 			}
 			if (!sessionIds.has(item.sessionId) && !item.metricName.startsWith("PF_TM_")) {
 				sessionIds.add(item.sessionId);
+			}
+			// Convert nano seconds to miliseconds
+			if (item.metricName == PifinaMetricName.INGRESS_JITTER_AVG) {
+				if (item.value > 0) {
+					item.value = item.value / 1000;
+				}
 			}
 			metricData[key].push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId, type: item.type});
 		})
