@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 	"github.com/thushjandan/pifina/pkg/controller/dataplane/tofino/driver"
 	"github.com/thushjandan/pifina/pkg/controller/trafficselector"
 	"github.com/thushjandan/pifina/pkg/model"
@@ -40,9 +41,10 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 		collector.logger.Error("Error occured during LPF initialization", "err", err)
 	}
 
-	wg.Add(8)
+	wg.Add(1)
 	// Start collector threads
-	go collector.CollectIngressStartMatchCounter(ctx, wg, metricSink)
+	go collector.CollectMetrics(ctx, wg, metricSink)
+	/*go collector.CollectIngressStartMatchCounter(ctx, wg, metricSink)
 	go collector.CollectIngressHdrStartCounter(ctx, wg, metricSink)
 	go collector.CollectIngressHdrEndCounter(ctx, wg, metricSink)
 	go collector.CollectEgressStartCounter(ctx, wg, metricSink)
@@ -56,9 +58,89 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	for i := range extraProbes {
 		wg.Add(1)
 		go collector.CollectExtraHeaderSizeCounter(ctx, wg, metricSink, extraProbes[i])
-	}
+	}*/
 }
 
+func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
+	// Mark the context as done after exiting the routine.
+	defer wg.Done()
+
+	ticker := time.NewTicker(collector.sampleInterval)
+	// Stop the ticker before leaving
+	defer ticker.Stop()
+
+	for {
+		select {
+		// Got a tick from the ticker.
+		case <-ticker.C:
+			start := time.Now()
+			sessionIds := collector.ts.GetSessionIdCache()
+			allMetricRequests := make([]*bfruntime.Entity, 0)
+			metricRequests, err := collector.driver.GetMatchSelectorEntriesRequest()
+			if err == nil {
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
+			metricRequests, err = collector.driver.GetIngressHdrStartCounter(sessionIds)
+			if err == nil {
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
+			metricRequests, err = collector.driver.GetIngressHdrEndCounter(sessionIds)
+			if err == nil {
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
+			metricRequests, err = collector.driver.GetEgressStartCounter(sessionIds)
+			if err == nil {
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
+			metricRequests, err = collector.driver.GetEgressEndCounter(sessionIds)
+			if err == nil {
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
+			metricRequests, err = collector.driver.GetIngressJitter(sessionIds)
+			if err == nil {
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
+			// App registers
+			appRegistersToReq := collector.ts.GetAppRegisterProbes()
+			if len(appRegistersToReq) > 0 {
+				metricRequests, err = collector.driver.GetMetricFromRegisterRequest(appRegistersToReq, model.METRIC_EXT_VALUE)
+				if err == nil {
+					allMetricRequests = append(allMetricRequests, metricRequests...)
+				}
+			}
+			// Extra Probes
+			extraProbes := collector.driver.GetExtraProbes()
+			for i := range extraProbes {
+				metricRequests, err = collector.driver.GetHdrSizeCounter(extraProbes[i], sessionIds)
+				if err == nil {
+					allMetricRequests = append(allMetricRequests, metricRequests...)
+				}
+			}
+			bfResponse, err := collector.driver.SendReadRequest(allMetricRequests)
+			collector.logger.Debug("Time CollectIngressStartMatchCounter", "time", time.Since(start))
+			if err != nil {
+				collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
+			}
+			metrics, err := collector.driver.ProcessMetricResponse(bfResponse)
+			if err != nil {
+				collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
+			} else {
+				collector.logger.Debug("Collection of Ingress Start Match table counter has succeeded.", "metrics", metrics)
+				for i := range metrics {
+					metricSink <- metrics[i]
+				}
+			}
+			collector.logger.Debug("Time CollectIngressStartMatchCounter", "time", time.Since(start))
+		// Terminate the for loop.
+		case <-ctx.Done():
+			collector.logger.Info("Stopping Ingress Start Match table counter collector...")
+			return
+		}
+	}
+
+}
+
+/*
 func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {
 	// Mark the context as done after exiting the routine.
 	defer wg.Done()
@@ -71,6 +153,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 		select {
 		// Got a tick from the ticker.
 		case <-ticker.C:
+			start := time.Now()
 			metrics, err := collector.driver.GetIngressStartMatchSelectorCounter()
 			if err != nil {
 				collector.logger.Error("Error occured during collection of Ingress Start Match table counter", "err", err)
@@ -80,6 +163,7 @@ func (collector *MetricCollector) CollectIngressStartMatchCounter(ctx context.Co
 					metricSink <- metrics[i]
 				}
 			}
+			collector.logger.Debug("Time CollectIngressStartMatchCounter", "time", time.Since(start))
 		// Terminate the for loop.
 		case <-ctx.Done():
 			collector.logger.Info("Stopping Ingress Start Match table counter collector...")
@@ -243,3 +327,4 @@ func (collector *MetricCollector) CollectIngressJitter(ctx context.Context, wg *
 		}
 	}
 }
+*/

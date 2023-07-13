@@ -16,6 +16,7 @@ func (driver *TofinoDriver) createP4TableIndex() {
 		for _, probe := range PROBE_TABLES {
 			if strings.Contains(name, probe) {
 				driver.probeTableMap[probe] = name
+				driver.probeTableMap[name] = probe
 				break
 			}
 		}
@@ -25,6 +26,7 @@ func (driver *TofinoDriver) createP4TableIndex() {
 			shortTblName := tblNameSplit[len(tblNameSplit)-1]
 			// Add the short name to the table cache
 			driver.probeTableMap[shortTblName] = name
+			driver.probeTableMap[name] = shortTblName
 			// Track extra probes separately
 			driver.extraProbeNameCache = append(driver.extraProbeNameCache, shortTblName)
 		}
@@ -90,6 +92,11 @@ func (driver *TofinoDriver) FindTableNameByShortName(shortName string) string {
 		return tblName
 	}
 	return ""
+}
+
+// e.g. pipe.SwitchEgress.pfEgressStartProbe.PF_EGRESS_START_CNT => PF_EGRESS_START_CNT
+func (driver *TofinoDriver) FindShortTableNameByName(fullName string) string {
+	return driver.FindTableNameByShortName(fullName)
 }
 
 func (driver *TofinoDriver) GetKeyIdByName(tblName, keyName string) uint32 {
