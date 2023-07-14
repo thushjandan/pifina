@@ -58,10 +58,19 @@ func (driver *TofinoDriver) LoadPortNameCache() error {
 		return &model.ErrNameNotFound{Msg: "No port information have been returned by device", Entity: TABLE_NAME_PORT_INFO}
 	}
 
+	// Get Data Id for Port name
+	portDataId := driver.GetSingletonDataIdByName(TABLE_NAME_PORT_INFO, PORT_NAME_INDEX_NAME)
+
 	for i := range entities {
-		portId := entities[i].GetTableEntry().GetData().GetFields()[0].GetStream()
-		portName := string(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
-		// We need only 2 bytes
+		portName := ""
+		// Search for port name data field
+		for _, dataField := range entities[i].GetTableEntry().GetData().GetFields() {
+			if dataField.FieldId == portDataId {
+				portName = dataField.GetStrVal()
+			}
+		}
+		portId := entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue()
+		// add it to the cache
 		driver.portCache[portName] = portId
 	}
 	driver.logger.Info("Port cache have been loaded", "portCount", len(entities))
@@ -173,6 +182,35 @@ func (driver *TofinoDriver) GetTMCountersByPort(ports []string) ([]*model.Metric
 	}
 
 	return transformedMetrics, nil
+}
+
+func (driver *TofinoDriver) ProcessTMCounters(entity *bfruntime.Entity) ([]*model.MetricItem, error) {
+	// Transform response
+	transformedMetrics := make([]*model.MetricItem, 0)
+	tblEntry := entity.GetTableEntry()
+	dataEntries := tblEntry.GetData().GetFields()
+	for data_i := range dataEntries {
+		// Dataplane could return just a single byte instead of 4 bytes.
+		// So we copy the response in a 4 byte slice.
+		rawValue := dataEntries[data_i].GetStream()
+
+		decodedValue := binary.BigEndian.Uint64(rawValue)
+		tblName := driver.GetTableNameById(tblEntry.GetTableId())
+		decodedPortId := binary.BigEndian.Uint32(tblEntry.GetKey().GetFields()[0].GetExact().GetValue())
+		dataFieldName := driver.GetSingletonDataNameById(tblName, dataEntries[data_i].FieldId)
+		tblNameSplit := strings.Split(tblName, ".")
+		shortTblName := tblNameSplit[len(tblNameSplit)-1]
+		newMetric := &model.MetricItem{
+			SessionId:  decodedPortId,
+			Value:      uint64(decodedValue),
+			Type:       model.METRIC_EXT_VALUE,
+			MetricName: fmt.Sprintf("PF_TM_%s_%s", shortTblName, dataFieldName),
+		}
+		transformedMetrics = append(transformedMetrics, newMetric)
+	}
+
+	return transformedMetrics, nil
+
 }
 
 // Retrieves register values by a list of appRegister structs, which are used as index.

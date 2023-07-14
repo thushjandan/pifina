@@ -214,6 +214,16 @@ func (driver *TofinoDriver) GetSingletonDataIdByName(tblName, dataName string) u
 			}
 		}
 	}
+	// Find table name in index for non-P4 tables
+	if sliceIdx, ok := driver.indexNonP4Tables[tblName]; ok {
+		// Table name has been found in hash table
+		for dataIdx := range driver.NonP4Tables[sliceIdx].Data {
+			dataObj := driver.NonP4Tables[sliceIdx].Data[dataIdx]
+			if dataObj.Singleton.Name == dataName {
+				return dataObj.Singleton.Id
+			}
+		}
+	}
 	return dataId
 }
 
