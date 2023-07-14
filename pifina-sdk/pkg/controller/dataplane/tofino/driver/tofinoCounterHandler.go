@@ -220,14 +220,15 @@ func (driver *TofinoDriver) ProcessCounterResponse(entity *bfruntime.Entity) ([]
 }
 
 // Reset indirect counters on device given a list of sessionIds
-func (driver *TofinoDriver) ResetCounter(sessionIds []uint32, shortTbleName string) {
+func (driver *TofinoDriver) GetResetCounterRequests(sessionIds []uint32) []*bfruntime.Update {
+	shortTblName := PROBE_EGRESS_START_CNT
 	registerValueByteSize := 8
 	allResetReq := make([]*bfruntime.Update, 0)
 	// Build reset request
 	for _, id := range sessionIds {
-		resetReq, err := driver.getIndirectCounterResetRequest(shortTbleName, COUNTER_INDEX_KEY_NAME, id, []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}, registerValueByteSize)
+		resetReq, err := driver.getIndirectCounterResetRequest(shortTblName, COUNTER_INDEX_KEY_NAME, id, []string{COUNTER_SPEC_BYTES, COUNTER_SPEC_PKTS}, registerValueByteSize)
 		if err != nil {
-			driver.logger.Error("cannot build bfrt reset request", "tblName", shortTbleName, "err", err)
+			driver.logger.Error("cannot build bfrt reset request", "tblName", shortTblName, "err", err)
 			continue
 		} else {
 			allResetReq = append(allResetReq, &bfruntime.Update{
@@ -236,11 +237,5 @@ func (driver *TofinoDriver) ResetCounter(sessionIds []uint32, shortTbleName stri
 			})
 		}
 	}
-	if len(allResetReq) > 0 {
-		// Send reset requests
-		err := driver.SendWriteRequest(allResetReq)
-		if err != nil {
-			driver.logger.Error("Register reset has failed", "tblName", shortTbleName, "err", err)
-		}
-	}
+	return allResetReq
 }

@@ -194,6 +194,102 @@ func (driver *TofinoDriver) ProcessMatchActionResponse(entity *bfruntime.Entity)
 	return transformedMetrics, nil
 }
 
+func (driver *TofinoDriver) GetResetTableSelectorRequests(selectorEntries []*model.MatchSelectorEntry) ([]*bfruntime.Update, error) {
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	// Get key Ids
+	counterBytesKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_BYTES)
+	counterPktsKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_PKTS)
+
+	// Convert to byte slice
+	zeroValue := make([]byte, 8)
+
+	dataFields := []*bfruntime.DataField{
+		{
+			FieldId: counterBytesKeyId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: zeroValue,
+			},
+		},
+		{
+			FieldId: counterPktsKeyId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: zeroValue,
+			},
+		},
+	}
+
+	updateRequests := []*bfruntime.Update{}
+
+	for i := range selectorEntries {
+		keyFields := []*bfruntime.KeyField{}
+		for _, keyItem := range selectorEntries[i].Keys {
+			switch keyItem.MatchType {
+			case model.MATCH_TYPE_EXACT:
+				keyFields = append(keyFields, &bfruntime.KeyField{
+					FieldId: keyItem.FieldId,
+					MatchType: &bfruntime.KeyField_Exact_{
+						Exact: &bfruntime.KeyField_Exact{
+							Value: keyItem.Value,
+						},
+					},
+				})
+			case model.MATCH_TYPE_TERNARY:
+				keyFields = append(keyFields, &bfruntime.KeyField{
+					FieldId: keyItem.FieldId,
+					MatchType: &bfruntime.KeyField_Ternary_{
+						Ternary: &bfruntime.KeyField_Ternary{
+							Value: keyItem.Value,
+							Mask:  keyItem.ValueMask,
+						},
+					},
+				})
+			case model.MATCH_TYPE_LPM:
+				keyFields = append(keyFields, &bfruntime.KeyField{
+					FieldId: keyItem.FieldId,
+					MatchType: &bfruntime.KeyField_Lpm{
+						Lpm: &bfruntime.KeyField_LPM{
+							Value:     keyItem.Value,
+							PrefixLen: keyItem.PrefixLength,
+						},
+					},
+				})
+			}
+		}
+
+		tblEntry := &bfruntime.Entity{
+			Entity: &bfruntime.Entity_TableEntry{
+				TableEntry: &bfruntime.TableEntry{
+					TableId: tblId,
+					Value: &bfruntime.TableEntry_Key{
+						Key: &bfruntime.TableKey{
+							Fields: keyFields,
+						},
+					},
+					Data: &bfruntime.TableData{
+						Fields: dataFields,
+					},
+				},
+			},
+		}
+
+		updateRequests = append(updateRequests, &bfruntime.Update{
+			Type:   bfruntime.Update_MODIFY,
+			Entity: tblEntry,
+		})
+	}
+
+	return updateRequests, nil
+}
+
 // Retrieve all MatchSelectorEntries from device
 func (driver *TofinoDriver) GetMatchSelectorEntries() ([]*bfruntime.Entity, error) {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]

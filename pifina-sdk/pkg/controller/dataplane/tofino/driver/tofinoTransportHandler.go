@@ -156,7 +156,7 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 
 	var dataFields []*bfruntime.DataField
 	for _, dataName := range dataNames {
-		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
+		dataId, _ := driver.GetSingletonDataIdLikeName(tblName, dataName)
 		if dataId == 0 {
 			return nil, &model.ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
 		}

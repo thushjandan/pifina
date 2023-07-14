@@ -241,29 +241,31 @@ func (driver *TofinoDriver) GetMetricFromRegister(appRegisters []*model.AppRegis
 	return transformedMetrics, nil
 }
 
-func (driver *TofinoDriver) ResetRegister(sessionIds []uint32, shortTbleName string) {
-	registerValueByteSize := 4
+func (driver *TofinoDriver) GetResetRegisterRequest(sessionIds []uint32) []*bfruntime.Update {
 	allResetReq := make([]*bfruntime.Update, 0)
+	shortTblNames := []string{PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_END_CNT}
+	extraProbes := driver.GetExtraProbes()
+	shortTblNames = append(extraProbes, shortTblNames...)
 	// Build reset request
-	for _, id := range sessionIds {
-		resetReq, err := driver.getIndirectCounterResetRequest(shortTbleName, REGISTER_INDEX_KEY_NAME, id, []string{shortTbleName}, registerValueByteSize)
-		if err != nil {
-			driver.logger.Error("cannot build bfrt reset request", "tblName", shortTbleName, "err", err)
-			continue
-		} else {
-			allResetReq = append(allResetReq, &bfruntime.Update{
-				Type:   bfruntime.Update_MODIFY,
-				Entity: resetReq,
-			})
+	for _, shortTblName := range shortTblNames {
+		tblName := driver.FindTableNameByShortName(shortTblName)
+		_, dataName := driver.GetSingletonDataIdLikeName(tblName, shortTblName)
+		dataWidth := driver.GetSingletonDataWidthByName(tblName, dataName)
+		dataWidth = dataWidth / 8
+		for _, id := range sessionIds {
+			resetReq, err := driver.getIndirectCounterResetRequest(shortTblName, REGISTER_INDEX_KEY_NAME, id, []string{shortTblName}, int(dataWidth))
+			if err != nil {
+				driver.logger.Error("cannot build bfrt reset request", "tblName", shortTblName, "err", err)
+				continue
+			} else {
+				allResetReq = append(allResetReq, &bfruntime.Update{
+					Type:   bfruntime.Update_MODIFY,
+					Entity: resetReq,
+				})
+			}
 		}
 	}
-	if len(allResetReq) > 0 {
-		// Send reset requests
-		err := driver.SendWriteRequest(allResetReq)
-		if err != nil {
-			driver.logger.Error("Register reset has failed", "tblName", shortTbleName, "err", err)
-		}
-	}
+	return allResetReq
 }
 
 // Returns from cache all available registers on device.
