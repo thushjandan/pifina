@@ -18,14 +18,16 @@ type MetricCollector struct {
 	sampleInterval time.Duration
 	ts             *trafficselector.TrafficSelector
 	lpfTimeConst   float32
+	pipelineCount  int
 }
 
-func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int, ts *trafficselector.TrafficSelector) *MetricCollector {
+func NewMetricCollector(logger hclog.Logger, driver *driver.TofinoDriver, sampleInterval int, ts *trafficselector.TrafficSelector, pipelineCount int) *MetricCollector {
 	return &MetricCollector{
 		logger:         logger.Named("collector"),
 		driver:         driver,
 		sampleInterval: time.Duration(sampleInterval) * time.Millisecond,
 		ts:             ts,
+		pipelineCount:  pipelineCount,
 	}
 }
 
@@ -116,6 +118,12 @@ func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.W
 					allMetricRequests = append(allMetricRequests, metricRequests...)
 				}
 			}
+			// Traffic manager
+			monitoredPorts := collector.ts.GetMonitoredPorts()
+			if len(monitoredPorts) > 0 {
+				metricRequests = collector.driver.GetTMCountersByPortRequests(monitoredPorts)
+				allMetricRequests = append(allMetricRequests, metricRequests...)
+			}
 			bfResponse, err := collector.driver.SendReadRequest(allMetricRequests)
 			collector.logger.Debug("Time collection after sending read", "time", time.Since(start))
 			if err != nil {
@@ -123,11 +131,19 @@ func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.W
 			}
 			// Reset counters
 			collector.ResetCounters(sessionIds)
+			// Traffic manager requests per pipeline
+			tmMetrics, err := collector.driver.GetTMPipelineCounter(collector.pipelineCount)
+			if err != nil {
+				collector.logger.Error("Error occured during collection of traffic manager metrics per pipeline", "err", err)
+			}
 			// Process metrics
 			metrics, err := collector.driver.ProcessMetricResponse(bfResponse)
 			if err != nil {
 				collector.logger.Error("Error occured during processing raw metric values", "err", err)
 			} else {
+				// Append TM metrics
+				metrics = append(metrics, tmMetrics...)
+				// Send to sink thread
 				for i := range metrics {
 					metricSink <- metrics[i]
 				}

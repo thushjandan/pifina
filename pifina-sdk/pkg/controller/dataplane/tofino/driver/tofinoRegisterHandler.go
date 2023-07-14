@@ -294,40 +294,6 @@ func (driver *TofinoDriver) transformSessionIdToAppRegister(sessionIds []uint32,
 	return registerToRequest
 }
 
-func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) ([]*model.MetricItem, error) {
-	// Transform response
-	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
-	//timeNow := time.Now()
-	for i := range entities {
-		tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
-		tableType := driver.P4Tables[driver.indexP4Tables[tblName]].TableType
-		if tableType == "MatchAction_Direct" {
-			metric, err := driver.ProcessMatchActionResponse(entities[i])
-			if err != nil {
-				continue
-			}
-			transformedMetrics = append(transformedMetrics, metric...)
-		}
-
-		if tableType == "Register" {
-			metric, err := driver.ProcessRegisterResponse(entities[i])
-			if err != nil {
-				continue
-			}
-			transformedMetrics = append(transformedMetrics, metric)
-		}
-
-		if tableType == "Counter" {
-			metric, err := driver.ProcessCounterResponse(entities[i])
-			if err != nil {
-				continue
-			}
-			transformedMetrics = append(transformedMetrics, metric...)
-		}
-	}
-	return transformedMetrics, nil
-}
-
 func (driver *TofinoDriver) ProcessRegisterResponse(entity *bfruntime.Entity) (*model.MetricItem, error) {
 	tblName := driver.GetTableNameById(entity.GetTableEntry().GetTableId())
 	// Get sessionId from key field.

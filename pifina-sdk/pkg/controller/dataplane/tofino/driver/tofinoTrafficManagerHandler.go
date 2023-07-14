@@ -79,7 +79,7 @@ func (driver *TofinoDriver) LoadPortNameCache() error {
 }
 
 // Retrieves ingress and egress port counters from the perspective of TM.
-func (driver *TofinoDriver) GetTMCountersByPort(ports []string) ([]*model.MetricItem, error) {
+func (driver *TofinoDriver) GetTMCountersByPortRequests(ports []string) []*bfruntime.Entity {
 	tblEntries := []*bfruntime.Entity{}
 	tblId_ig := driver.GetTableIdByName(TABLE_NAME_TM_CNT_IG)
 	tblId_eg := driver.GetTableIdByName(TABLE_NAME_TM_CNT_EG)
@@ -147,41 +147,7 @@ func (driver *TofinoDriver) GetTMCountersByPort(ports []string) ([]*model.Metric
 		)
 	}
 
-	// Send read request to switch.
-	entities, err := driver.SendReadRequest(tblEntries)
-	if err != nil {
-		return nil, err
-	}
-
-	// Transform response
-	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
-	timeNow := time.Now()
-	for i := range entities {
-		tblEntry := entities[i].GetTableEntry()
-		dataEntries := tblEntry.GetData().GetFields()
-		for data_i := range dataEntries {
-			// Dataplane could return just a single byte instead of 4 bytes.
-			// So we copy the response in a 4 byte slice.
-			rawValue := dataEntries[data_i].GetStream()
-
-			decodedValue := binary.BigEndian.Uint64(rawValue)
-			tblName := driver.GetTableNameById(tblEntry.GetTableId())
-			decodedPortId := binary.BigEndian.Uint32(tblEntry.GetKey().GetFields()[0].GetExact().GetValue())
-			dataFieldName := driver.GetSingletonDataNameById(tblName, dataEntries[data_i].FieldId)
-			tblNameSplit := strings.Split(tblName, ".")
-			shortTblName := tblNameSplit[len(tblNameSplit)-1]
-			newMetric := &model.MetricItem{
-				SessionId:   decodedPortId,
-				Value:       uint64(decodedValue),
-				Type:        model.METRIC_EXT_VALUE,
-				MetricName:  fmt.Sprintf("PF_TM_%s_%s", shortTblName, dataFieldName),
-				LastUpdated: timeNow,
-			}
-			transformedMetrics = append(transformedMetrics, newMetric)
-		}
-	}
-
-	return transformedMetrics, nil
+	return tblEntries
 }
 
 func (driver *TofinoDriver) ProcessTMCounters(entity *bfruntime.Entity) ([]*model.MetricItem, error) {
@@ -214,7 +180,7 @@ func (driver *TofinoDriver) ProcessTMCounters(entity *bfruntime.Entity) ([]*mode
 }
 
 // Retrieves register values by a list of appRegister structs, which are used as index.
-func (driver *TofinoDriver) GetTMPipelineCounter() ([]*model.MetricItem, error) {
+func (driver *TofinoDriver) GetTMPipelineCounter(pipelineCount int) ([]*model.MetricItem, error) {
 	tblEntries := []*bfruntime.Entity{}
 	tblId_pipe := driver.GetTableIdByName(TABLE_NAME_TM_CNT_PIPE)
 	tblEntries = append(tblEntries,
@@ -230,7 +196,7 @@ func (driver *TofinoDriver) GetTMPipelineCounter() ([]*model.MetricItem, error) 
 	// Transform response
 	transformedMetrics := make([]*model.MetricItem, 0)
 	timeNow := time.Now()
-	for pipe_id := 0; pipe_id < 1; pipe_id++ {
+	for pipe_id := 0; pipe_id < pipelineCount; pipe_id++ {
 		// Send read request to switch.
 		entities, err := driver.SendReadRequestByPipeId(tblEntries, pipe_id)
 		if err != nil {

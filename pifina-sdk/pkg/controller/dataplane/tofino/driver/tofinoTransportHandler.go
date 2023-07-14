@@ -257,36 +257,50 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 	return nil
 }
 
-// Enable Sync operation on register
-func (driver *TofinoDriver) EnableSyncOperationOnRegister(tblName string) error {
-	tblId := driver.GetTableIdByName(tblName)
-	if tblId == 0 {
-		return errors.New(fmt.Sprintf("Cannot find table id of %s", tblName))
-	}
+// Process metric responses and transform to metric item objects
+func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) ([]*model.MetricItem, error) {
+	// Transform response
+	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
+	//timeNow := time.Now()
+	for i := range entities {
+		tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
+		tableType := driver.P4Tables[driver.indexP4Tables[tblName]].TableType
+		// Process match action metrics
+		if tableType == TABLE_TYPE_MATCHACTION {
+			metric, err := driver.ProcessMatchActionResponse(entities[i])
+			if err != nil {
+				continue
+			}
+			transformedMetrics = append(transformedMetrics, metric...)
+		}
 
-	tblEntry := &bfruntime.TableOperation{
-		TableId:             tblId,
-		TableOperationsType: "Sync",
-	}
+		// Process register metrics
+		if tableType == TABLE_TYPE_REGISTER {
+			metric, err := driver.ProcessRegisterResponse(entities[i])
+			if err != nil {
+				continue
+			}
+			transformedMetrics = append(transformedMetrics, metric)
+		}
 
-	updateItems := []*bfruntime.Update{
-		{
-			Type: bfruntime.Update_INSERT,
-			Entity: &bfruntime.Entity{
-				Entity: &bfruntime.Entity_TableOperation{
-					TableOperation: tblEntry,
-				},
-			},
-		},
+		// Process Counter metrics
+		if tableType == TABLE_TYPE_COUNTER {
+			metric, err := driver.ProcessCounterResponse(entities[i])
+			if err != nil {
+				continue
+			}
+			transformedMetrics = append(transformedMetrics, metric...)
+		}
+		// Process TM counters
+		if tableType == TABLE_TYPE_TM_CNT_IG || tableType == TABLE_TYPE_TM_CNT_EG {
+			metric, err := driver.ProcessTMCounters(entities[i])
+			if err != nil {
+				continue
+			}
+			transformedMetrics = append(transformedMetrics, metric...)
+		}
 	}
-
-	err := driver.SendWriteRequest(updateItems)
-	if err != nil {
-		driver.logger.Error("Enable sync operation on register failed.", "register", tblName, "err", err)
-		return err
-	}
-	return nil
-
+	return transformedMetrics, nil
 }
 
 // Disconnects from Tofino switch
