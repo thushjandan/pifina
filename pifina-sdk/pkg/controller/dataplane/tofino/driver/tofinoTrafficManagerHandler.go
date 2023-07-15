@@ -37,11 +37,20 @@ func (driver *TofinoDriver) LoadPortNameCache() error {
 		return &model.ErrNameNotFound{Msg: "Table Id not found in non index table cache", Entity: TABLE_NAME_PORT_INFO}
 	}
 
+	dataId := driver.GetSingletonDataIdByName(TABLE_NAME_PORT_INFO, PORT_NAME_INDEX_NAME)
+
 	tblEntries := []*bfruntime.Entity{
 		{
 			Entity: &bfruntime.Entity_TableEntry{
 				TableEntry: &bfruntime.TableEntry{
 					TableId: driver.NonP4Tables[sliceIdx].Id,
+					Data: &bfruntime.TableData{
+						Fields: []*bfruntime.DataField{
+							{
+								FieldId: dataId,
+							},
+						},
+					},
 				},
 			},
 		},
@@ -187,7 +196,8 @@ func (driver *TofinoDriver) GetTMPipelineCounter(pipelineCount int) ([]*model.Me
 		&bfruntime.Entity{
 			Entity: &bfruntime.Entity_TableEntry{
 				TableEntry: &bfruntime.TableEntry{
-					TableId: tblId_pipe,
+					TableId:        tblId_pipe,
+					IsDefaultEntry: true,
 				},
 			},
 		},
