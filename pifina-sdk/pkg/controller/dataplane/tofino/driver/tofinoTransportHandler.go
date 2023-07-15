@@ -272,8 +272,8 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
 	timeNow := time.Now()
 	for i := range entities {
-		tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
-		tableType := driver.P4Tables[driver.indexP4Tables[tblName]].TableType
+		tblId := entities[i].GetTableEntry().GetTableId()
+		tableType := driver.GetTableTypeById(tblId)
 		// Process match action metrics
 		if tableType == TABLE_TYPE_MATCHACTION {
 			metric, err := driver.ProcessMatchActionResponse(entities[i])

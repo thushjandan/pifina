@@ -85,6 +85,23 @@ func (driver *TofinoDriver) GetTableNameById(tblId uint32) string {
 	return tblName
 }
 
+func (driver *TofinoDriver) GetTableTypeById(tblId uint32) string {
+	tblType := ""
+	// Find table name in index
+	if sliceIdx, ok := driver.indexByIdP4Tables[tblId]; ok {
+		// Table name has been found in hash table
+		return driver.P4Tables[sliceIdx].TableType
+	}
+
+	// Find table name in index
+	if sliceIdx, ok := driver.indexByIdNonP4Tables[tblId]; ok {
+		// Table name has been found in hash table
+		return driver.NonP4Tables[sliceIdx].TableType
+	}
+
+	return tblType
+}
+
 // Find full table name by the short name of the table
 // e.g. PF_EGRESS_START_CNT => pipe.SwitchEgress.pfEgressStartProbe.PF_EGRESS_START_CNT
 func (driver *TofinoDriver) FindTableNameByShortName(shortName string) string {

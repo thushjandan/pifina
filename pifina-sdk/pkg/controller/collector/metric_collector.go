@@ -103,12 +103,6 @@ func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.W
 					allMetricRequests = append(allMetricRequests, metricRequests...)
 				}
 			}
-			// Traffic manager
-			monitoredPorts := collector.ts.GetMonitoredPorts()
-			if len(monitoredPorts) > 0 {
-				metricRequests = collector.driver.GetTMCountersByPortRequests(monitoredPorts)
-				allMetricRequests = append(allMetricRequests, metricRequests...)
-			}
 			bfResponse, err := collector.driver.SendReadRequest(allMetricRequests)
 			collector.logger.Debug("Time collection after sending read", "time", time.Since(start))
 			if err != nil {
@@ -116,10 +110,20 @@ func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.W
 			}
 			// Reset counters
 			collector.ResetCounters(sessionIds)
+			// Traffic manager requests per port
+			monitoredPorts := collector.ts.GetMonitoredPorts()
+			if len(monitoredPorts) > 0 {
+				metricRequests = collector.driver.GetTMCountersByPortRequests(monitoredPorts)
+				tmBfResponse, err := collector.driver.SendReadRequest(metricRequests)
+				if err != nil {
+					collector.logger.Warn("Error occured during collection of traffic manager metric", "ports", monitoredPorts, "err", err)
+				}
+				bfResponse = append(bfResponse, tmBfResponse...)
+			}
 			// Traffic manager requests per pipeline
 			tmMetrics, err := collector.driver.GetTMPipelineCounter(collector.pipelineCount)
 			if err != nil {
-				collector.logger.Error("Error occured during collection of traffic manager metrics per pipeline", "err", err)
+				collector.logger.Warn("Error occured during collection of traffic manager metrics per pipeline", "err", err)
 			}
 			// Process metrics
 			metrics, err := collector.driver.ProcessMetricResponse(bfResponse)
