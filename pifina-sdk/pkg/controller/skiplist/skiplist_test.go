@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sync"
 	"testing"
 
 	"github.com/thushjandan/pifina/pkg/model"
@@ -42,54 +41,6 @@ func TestCRUD(t *testing.T) {
 			t.Fatal("Skiplist is corrupt as other keys cannot been found")
 		}
 	}
-
-}
-
-func TestConcurrentAccess(t *testing.T) {
-	sessionIdWidth := 7
-	sl, err := NewSkiplistWithMaxBound(sessionIdWidth)
-	if err != nil {
-		t.Fatal("Cannot initialize skip list with a specific upper bound", sessionIdWidth)
-	}
-	keys := []string{"REGISTER1", "REGISTER5", "REGISTER9", "REGISTER3", "REGISTER12", "REGISTER34", "REGISTER7"}
-	wg := &sync.WaitGroup{}
-	WRITER_THREADS := 20
-	READER_THREADS := 10
-	REMOVE_THREADS := 4
-	wg.Add(WRITER_THREADS)
-	for i := 0; i < WRITER_THREADS; i++ {
-		go func() {
-			for j := 0; j < 10000; j++ {
-				for _, key := range keys {
-					randomVal := rand.Intn(1000-1) + 1
-					sl.Set(key, 0, &model.MetricItem{Value: uint64(randomVal), MetricName: key, Type: model.METRIC_BYTES})
-				}
-			}
-			wg.Done()
-		}()
-	}
-	wg.Add(READER_THREADS)
-	for i := 0; i < READER_THREADS; i++ {
-		go func() {
-			for j := 0; j < 100000; j++ {
-				for _, key := range keys {
-					sl.Get(key, 0, model.METRIC_BYTES)
-				}
-			}
-			wg.Done()
-		}()
-	}
-
-	wg.Add(REMOVE_THREADS)
-	for i := 0; i < REMOVE_THREADS; i++ {
-		go func() {
-			for j := 0; j < 1000; j++ {
-				sl.Remove(keys[rand.Intn(len(keys))], 0, model.METRIC_BYTES)
-			}
-			wg.Done()
-		}()
-	}
-	wg.Wait()
 
 }
 

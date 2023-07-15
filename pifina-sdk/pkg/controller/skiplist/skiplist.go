@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/thushjandan/pifina/pkg/model"
@@ -18,7 +17,6 @@ type SkipList struct {
 	randSource     rand.Source
 	probability    float64
 	probTable      []float64
-	mutex          sync.RWMutex
 	length         int
 }
 
@@ -32,12 +30,8 @@ func (sl *SkipList) getCompositeKey(key string, subKey uint32, metricType string
 
 // Inserts a new item in the skiplist
 // If the key exists, it ignores the request
-// Locking is optimistic and happens only after searching.
 func (sl *SkipList) Set(key string, subKey uint32, value *model.MetricItem) {
 	compositeKey := sl.getCompositeKey(key, subKey, value.Type)
-
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
 
 	prevs := sl.getPrevElementNodes(compositeKey)
 	currentNode := prevs[0].next[0]
@@ -123,11 +117,8 @@ func (sl *SkipList) GetAllAndReset() []*model.MetricItem {
 
 // Remove deletes an element from the list.
 // Returns removed element pointer if found, nil if not found.
-// Locking is optimistic and happens only after searching with a fast check on adjacent nodes after locking.
 func (sl *SkipList) Remove(key string, subKey uint32, metricType string) {
 	compositeKey := sl.getCompositeKey(key, subKey, metricType)
-	sl.mutex.Lock()
-	defer sl.mutex.Unlock()
 
 	prevs := sl.getPrevElementNodes(compositeKey)
 
