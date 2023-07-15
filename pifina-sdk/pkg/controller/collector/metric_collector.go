@@ -46,21 +46,6 @@ func (collector *MetricCollector) StartMetricCollection(ctx context.Context, wg 
 	wg.Add(1)
 	// Start collector threads
 	go collector.CollectMetrics(ctx, wg, metricSink)
-	/*go collector.CollectIngressStartMatchCounter(ctx, wg, metricSink)
-	go collector.CollectIngressHdrStartCounter(ctx, wg, metricSink)
-	go collector.CollectIngressHdrEndCounter(ctx, wg, metricSink)
-	go collector.CollectEgressStartCounter(ctx, wg, metricSink)
-	go collector.CollectEgressEndCounter(ctx, wg, metricSink)
-	go collector.CollectIngressJitter(ctx, wg, metricSink)
-	go collector.CollectAppRegisterValues(ctx, wg, metricSink)
-	go collector.CollectTrafficManagerCounters(ctx, wg, metricSink)
-
-	// Start collector for each extra probe
-	extraProbes := collector.driver.GetExtraProbes()
-	for i := range extraProbes {
-		wg.Add(1)
-		go collector.CollectExtraHeaderSizeCounter(ctx, wg, metricSink, extraProbes[i])
-	}*/
 }
 
 func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.WaitGroup, metricSink chan *model.MetricItem) {

@@ -261,7 +261,7 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) ([]*model.MetricItem, error) {
 	// Transform response
 	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
-	//timeNow := time.Now()
+	timeNow := time.Now()
 	for i := range entities {
 		tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
 		tableType := driver.P4Tables[driver.indexP4Tables[tblName]].TableType
@@ -270,6 +270,9 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 			metric, err := driver.ProcessMatchActionResponse(entities[i])
 			if err != nil {
 				continue
+			}
+			for metric_i := range metric {
+				metric[metric_i].LastUpdated = timeNow
 			}
 			transformedMetrics = append(transformedMetrics, metric...)
 		}
@@ -280,6 +283,7 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 			if err != nil {
 				continue
 			}
+			metric.LastUpdated = timeNow
 			transformedMetrics = append(transformedMetrics, metric)
 		}
 
@@ -289,6 +293,9 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 			if err != nil {
 				continue
 			}
+			for metric_i := range metric {
+				metric[metric_i].LastUpdated = timeNow
+			}
 			transformedMetrics = append(transformedMetrics, metric...)
 		}
 		// Process TM counters
@@ -296,6 +303,9 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 			metric, err := driver.ProcessTMCounters(entities[i])
 			if err != nil {
 				continue
+			}
+			for metric_i := range metric {
+				metric[metric_i].LastUpdated = timeNow
 			}
 			transformedMetrics = append(transformedMetrics, metric...)
 		}
