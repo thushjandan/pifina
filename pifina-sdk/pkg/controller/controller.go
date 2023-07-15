@@ -77,10 +77,10 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 
 	metricDataChannel := make(chan *model.MetricItem, 10)
 	metricsSinkChannel := make(chan []*model.MetricItem)
-	wg.Add(3)
+	wg.Add(2)
 	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
-	go controller.bp.StartBufferpoolManager(ctx, wg, metricDataChannel)
-	go controller.bp.StartSampleMetrics(ctx, wg, metricsSinkChannel)
+	// Start Bufferpool and Sampler
+	go controller.bp.StartBufferpoolManager(ctx, wg, metricDataChannel, metricsSinkChannel)
 	// Start collector threads
 	controller.collector.StartMetricCollection(ctx, wg, metricDataChannel)
 	// Start API server in a thread. No need for waitgroup

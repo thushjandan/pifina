@@ -30,7 +30,7 @@ func NewBufferpool(logger hclog.Logger, driver *driver.TofinoDriver, ts *traffic
 
 // Creates a buffer pool and listens on data channel for any metrics to add to buffer pool
 // This thread is the only one, which adds metrics to bufferpool
-func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitGroup, c chan *model.MetricItem) {
+func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitGroup, newMetricChannel chan *model.MetricItem, sinkMetricChannel chan []*model.MetricItem) {
 	defer wg.Done()
 	sessionIdWidth, err := bp.driver.GetSessionIdBitWidth()
 	notReady := false
@@ -54,44 +54,25 @@ func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitG
 	}
 	bp.logger.Debug("Bufferpool is starting to listen for new metrics")
 
+	samplerTicker := time.NewTicker(1 * time.Second)
+	defer samplerTicker.Stop()
+
 	for {
 		select {
-		case newMetric := <-c:
+		case newMetric := <-newMetricChannel:
 			// Check if buffer pool is ready
 			if !notReady {
 				bp.logger.Trace("Adding a new metric to buffer pool", "metricName", newMetric.MetricName, "sessionId", newMetric.SessionId)
 				bp.metricStorage.Set(newMetric.MetricName, newMetric.SessionId, newMetric)
 			}
+		case <-samplerTicker.C:
+			if !notReady {
+				allItems := bp.metricStorage.GetAllAndReset()
+				bp.logger.Trace("Sampled metrics", "metrics", allItems)
+				sinkMetricChannel <- allItems
+			}
 		case <-ctx.Done():
-			bp.logger.Info("Stopping skiplist...")
-			return
-		}
-	}
-}
-
-// Remove a metric from skiplist
-// primary key is the name of the metric, subkey is the register index
-func (bp *Bufferpool) RemoveMetric(key string, subKey uint32, metricType string) {
-	bp.metricStorage.Remove(key, subKey, metricType)
-	bp.logger.Info("Metric has been removed from bufferpool", "metric", key, "index", subKey, "type", metricType)
-}
-
-// Sample every second all the metrics
-// It will retrive wait-free all available metrics from the bufferpool and reset them if needed
-func (bp *Bufferpool) StartSampleMetrics(ctx context.Context, wg *sync.WaitGroup, c chan []*model.MetricItem) {
-	defer wg.Done()
-
-	ticker := time.NewTicker(1 * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			allItems := bp.metricStorage.GetAllAndReset()
-			bp.logger.Trace("Sampled metrics", "metrics", allItems)
-			c <- allItems
-		case <-ctx.Done():
-			bp.logger.Info("Stopping metric sampler...")
+			bp.logger.Info("Stopping bufferpool...")
 			return
 		}
 	}
