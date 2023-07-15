@@ -210,6 +210,12 @@ func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Enti
 	if !driver.isConnected {
 		return nil, &model.ErrNotReady{Msg: "Not connected to Tofino"}
 	}
+	// Only single access to device allowed.
+	// Otherwise undefined behaviour of Tofino device could occur
+	// pipe_mgr could complains that a batch is already in progress
+	driver.lock.Lock()
+	defer driver.lock.Unlock()
+
 	ctx, cancel := context.WithTimeout(driver.ctx, 5*time.Second)
 	defer cancel()
 	// Send read request
@@ -246,6 +252,9 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 	}
 
 	if driver.isConnected {
+		// Only single access to device allowed
+		driver.lock.Lock()
+		defer driver.lock.Unlock()
 		ctx, cancel := context.WithTimeout(driver.ctx, 5*time.Second)
 		defer cancel()
 		_, err := driver.client.Write(ctx, &writeReq)

@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"math/rand"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
@@ -14,6 +15,7 @@ type TofinoDriver struct {
 	isConnected          bool
 	conn                 *grpc.ClientConn
 	client               bfruntime.BfRuntimeClient
+	lock                 sync.Mutex
 	streamChannel        bfruntime.BfRuntime_StreamChannelClient
 	ctx                  context.Context
 	cancel               context.CancelFunc
