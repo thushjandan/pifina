@@ -35,6 +35,7 @@ type TofinoControllerOptions struct {
 	SampleInterval          int
 	APIPort                 string
 	LpfTimeConst            float32
+	PipelineCount           int
 }
 
 func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
@@ -43,7 +44,7 @@ func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
 	}
 	driver := driver.NewTofinoDriver(options.Logger)
 	ts := trafficselector.NewTrafficSelector(options.Logger, driver, options.LpfTimeConst)
-	collector := collector.NewMetricCollector(options.Logger, driver, options.SampleInterval, ts)
+	collector := collector.NewMetricCollector(options.Logger, driver, options.SampleInterval, ts, options.PipelineCount)
 	bp := bufferpool.NewBufferpool(options.Logger, driver, ts)
 	apiServer := api.NewControllerApiServer(options.Logger, options.APIPort, ts, bp)
 	sink := sink.NewSink(options.Logger, options.CollectorServerEndpoint)

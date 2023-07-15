@@ -3,22 +3,47 @@ package driver
 import (
 	"encoding/binary"
 	"sort"
-	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 	"github.com/thushjandan/pifina/pkg/model"
 )
 
-func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.MetricItem, error) {
-	driver.logger.Trace("Requesting ingress start match selector counter")
-	entities, err := driver.GetMatchSelectorEntries()
-	if err != nil {
-		return nil, err
-	}
-
+// Retrieve all MatchSelectorEntries from device
+func (driver *TofinoDriver) GetMatchSelectorEntriesRequest() ([]*bfruntime.Entity, error) {
 	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
 	if !ok {
 		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
+	}
+
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	tblEntries := []*bfruntime.Entity{}
+
+	tblEntries = append(tblEntries,
+		&bfruntime.Entity{
+			Entity: &bfruntime.Entity_TableEntry{
+				TableEntry: &bfruntime.TableEntry{
+					IsDefaultEntry: false,
+					TableId:        tblId,
+					TableFlags: &bfruntime.TableFlags{
+						FromHw: true,
+					},
+				},
+			},
+		},
+	)
+	return tblEntries, nil
+}
+
+func (driver *TofinoDriver) ProcessMatchActionResponse(entity *bfruntime.Entity) ([]*model.MetricItem, error) {
+	tblName := driver.GetTableNameById(entity.GetTableEntry().GetTableId())
+	dataEntries := entity.GetTableEntry().GetData().GetFields()
+	// Skip default entry
+	if len(dataEntries) < 3 {
+		return nil, nil
 	}
 
 	actionName := driver.FindFullActionName(tblName, PROBE_INGRESS_MATCH_ACTION_NAME)
@@ -35,78 +60,133 @@ func (driver *TofinoDriver) GetIngressStartMatchSelectorCounter() ([]*model.Metr
 		return nil, &model.ErrNameNotFound{Msg: "Cannot find field id for the match selector", Entity: PROBE_INGRESS_MATCH_ACTION_NAME_SESSIONID}
 	}
 
-	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
-	updateRequests := make([]*bfruntime.Update, 0, len(entities))
-	timeNow := time.Now()
-	// Transform response
-	for i := range entities {
-		isCounterEntry := false
-		dataEntries := entities[i].GetTableEntry().GetData().GetFields()
-		// Skip default entry
-		if len(dataEntries) < 3 {
-			continue
+	transformedMetrics := make([]*model.MetricItem, 0)
+	sessionId := uint32(0)
+	for data_i := range dataEntries {
+		if dataEntries[data_i].GetFieldId() == sessionIdDataId {
+			rawValue := dataEntries[data_i].GetStream()
+			buffer := make([]byte, 4)
+			copy(buffer[len(buffer)-len(rawValue):], rawValue)
+			// Parse to uint32
+			sessionId = binary.BigEndian.Uint32(buffer)
 		}
-		sessionId := uint32(0)
-		for data_i := range dataEntries {
-			if dataEntries[data_i].GetFieldId() == sessionIdDataId {
-				rawValue := dataEntries[data_i].GetStream()
-				buffer := make([]byte, 4)
-				copy(buffer[len(buffer)-len(rawValue):], rawValue)
-				// Parse to uint32
-				sessionId = binary.BigEndian.Uint32(buffer)
-			}
-			// If the key indicates a byte counter
-			if dataEntries[data_i].GetFieldId() == counterBytesKeyId {
-				transformedMetrics = append(transformedMetrics, &model.MetricItem{
-					SessionId:   sessionId,
-					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:        model.METRIC_BYTES,
-					MetricName:  PROBE_INGRESS_MATCH_CNT,
-					LastUpdated: timeNow,
-				})
-				// Prepare the reset counter request
-				isCounterEntry = true
-				dataEntries[data_i].Value = &bfruntime.DataField_Stream{
-					Stream: make([]byte, 8),
-				}
-			}
-			// If the key indicates a packet counter
-			if dataEntries[data_i].GetFieldId() == counterPktsKeyId {
-				transformedMetrics = append(transformedMetrics, &model.MetricItem{
-					SessionId:   sessionId,
-					Value:       binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
-					Type:        model.METRIC_PKTS,
-					MetricName:  PROBE_INGRESS_MATCH_CNT,
-					LastUpdated: timeNow,
-				})
-				// Prepare the reset counter request
-				isCounterEntry = true
-				dataEntries[data_i].Value = &bfruntime.DataField_Stream{
-					Stream: make([]byte, 8),
-				}
-			}
+		// If the key indicates a byte counter
+		if dataEntries[data_i].GetFieldId() == counterBytesKeyId {
+			transformedMetrics = append(transformedMetrics, &model.MetricItem{
+				SessionId:  sessionId,
+				Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+				Type:       model.METRIC_BYTES,
+				MetricName: PROBE_INGRESS_MATCH_CNT,
+			})
 		}
-		// If the entry contains any
-		if isCounterEntry {
-			updateRequests = append(updateRequests, &bfruntime.Update{
-				Type: bfruntime.Update_MODIFY,
-				Entity: &bfruntime.Entity{
-					Entity: &bfruntime.Entity_TableEntry{
-						TableEntry: entities[i].GetTableEntry(),
-					},
-				},
+		// If the key indicates a packet counter
+		if dataEntries[data_i].GetFieldId() == counterPktsKeyId {
+			transformedMetrics = append(transformedMetrics, &model.MetricItem{
+				SessionId:  sessionId,
+				Value:      binary.BigEndian.Uint64(dataEntries[data_i].GetStream()),
+				Type:       model.METRIC_PKTS,
+				MetricName: PROBE_INGRESS_MATCH_CNT,
 			})
 		}
 	}
 
-	if len(updateRequests) > 0 {
-		err := driver.SendWriteRequest(updateRequests)
-		if err != nil {
-			driver.logger.Error("Error occured during table counter reset.", "err", err)
-		}
+	return transformedMetrics, nil
+}
+
+func (driver *TofinoDriver) GetResetTableSelectorRequests(selectorEntries []*model.MatchSelectorEntry) ([]*bfruntime.Update, error) {
+	tblName, ok := driver.probeTableMap[PROBE_INGRESS_MATCH_CNT]
+	if !ok {
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: PROBE_INGRESS_MATCH_CNT}
 	}
 
-	return transformedMetrics, nil
+	tblId := driver.GetTableIdByName(tblName)
+	if tblId == 0 {
+		return nil, &model.ErrNameNotFound{Msg: "Cannot find table name for the probe", Entity: tblName}
+	}
+
+	// Get key Ids
+	counterBytesKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_BYTES)
+	counterPktsKeyId := driver.GetSingletonDataIdByName(tblName, COUNTER_SPEC_PKTS)
+
+	// Convert to byte slice
+	zeroValue := make([]byte, 8)
+
+	dataFields := []*bfruntime.DataField{
+		{
+			FieldId: counterBytesKeyId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: zeroValue,
+			},
+		},
+		{
+			FieldId: counterPktsKeyId,
+			Value: &bfruntime.DataField_Stream{
+				Stream: zeroValue,
+			},
+		},
+	}
+
+	updateRequests := []*bfruntime.Update{}
+
+	for i := range selectorEntries {
+		keyFields := []*bfruntime.KeyField{}
+		for _, keyItem := range selectorEntries[i].Keys {
+			switch keyItem.MatchType {
+			case model.MATCH_TYPE_EXACT:
+				keyFields = append(keyFields, &bfruntime.KeyField{
+					FieldId: keyItem.FieldId,
+					MatchType: &bfruntime.KeyField_Exact_{
+						Exact: &bfruntime.KeyField_Exact{
+							Value: keyItem.Value,
+						},
+					},
+				})
+			case model.MATCH_TYPE_TERNARY:
+				keyFields = append(keyFields, &bfruntime.KeyField{
+					FieldId: keyItem.FieldId,
+					MatchType: &bfruntime.KeyField_Ternary_{
+						Ternary: &bfruntime.KeyField_Ternary{
+							Value: keyItem.Value,
+							Mask:  keyItem.ValueMask,
+						},
+					},
+				})
+			case model.MATCH_TYPE_LPM:
+				keyFields = append(keyFields, &bfruntime.KeyField{
+					FieldId: keyItem.FieldId,
+					MatchType: &bfruntime.KeyField_Lpm{
+						Lpm: &bfruntime.KeyField_LPM{
+							Value:     keyItem.Value,
+							PrefixLen: keyItem.PrefixLength,
+						},
+					},
+				})
+			}
+		}
+
+		tblEntry := &bfruntime.Entity{
+			Entity: &bfruntime.Entity_TableEntry{
+				TableEntry: &bfruntime.TableEntry{
+					TableId: tblId,
+					Value: &bfruntime.TableEntry_Key{
+						Key: &bfruntime.TableKey{
+							Fields: keyFields,
+						},
+					},
+					Data: &bfruntime.TableData{
+						Fields: dataFields,
+					},
+				},
+			},
+		}
+
+		updateRequests = append(updateRequests, &bfruntime.Update{
+			Type:   bfruntime.Update_MODIFY,
+			Entity: tblEntry,
+		})
+	}
+
+	return updateRequests, nil
 }
 
 // Retrieve all MatchSelectorEntries from device

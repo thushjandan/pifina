@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"math/rand"
+	"sync"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
@@ -14,6 +15,7 @@ type TofinoDriver struct {
 	isConnected          bool
 	conn                 *grpc.ClientConn
 	client               bfruntime.BfRuntimeClient
+	lock                 sync.Mutex
 	streamChannel        bfruntime.BfRuntime_StreamChannelClient
 	ctx                  context.Context
 	cancel               context.CancelFunc
@@ -48,7 +50,12 @@ const (
 	LPF_DECAY_TIME                            = "$LPF_SPEC_DECAY_TIME_CONSTANT_NS"
 	LPF_SCALE_DOWN_FACTOR                     = "$LPF_SPEC_OUT_SCALE_DOWN_FACTOR"
 	TABLE_TYPE_REGISTER                       = "Register"
-	TABLE_NAME_PORT_INFO                      = "$PORT_STR_INFO"
+	TABLE_TYPE_COUNTER                        = "Counter"
+	TABLE_TYPE_MATCHACTION                    = "MatchAction_Direct"
+	TABLE_TYPE_TM_CNT_IG                      = "TmCounterIgPort"
+	TABLE_TYPE_TM_CNT_EG                      = "TmCounterEgPort"
+	TABLE_NAME_PORT_INFO                      = "$PORT"
+	PORT_NAME_INDEX_NAME                      = "$PORT_NAME"
 	TABLE_NAME_TM_CNT_IG                      = "tf2.tm.counter.ig_port"
 	TABLE_NAME_TM_CNT_EG                      = "tf2.tm.counter.eg_port"
 	TABLE_NAME_TM_CNT_PIPE                    = "tf2.tm.counter.pipe"

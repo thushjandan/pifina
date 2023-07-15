@@ -27,6 +27,7 @@ func main() {
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
 	sample_interval := flag.Int("sample-interval-ms", 200, "Sample interval in ms. Default 100ms")
 	lpf_time_constant_int := flag.Int("lpf-time-ns", 80, "LPF time constant for computing moving average of the ingress jitter value.")
+	pipeline_count := flag.Int("pipe-count", 4, "Amount of pipeline existing on the tofino. Used to retrieve TrafficManager metrics per pipeline.")
 
 	flag.Parse()
 
@@ -73,6 +74,7 @@ func main() {
 		SampleInterval:          *sample_interval,
 		APIPort:                 *api_port,
 		LpfTimeConst:            float32(*lpf_time_constant_int),
+		PipelineCount:           *pipeline_count,
 	}
 	controller := controller.NewTofinoController(options)
 	err = controller.StartController(ctx, &wg, *connect_timeout)

@@ -48,7 +48,5 @@ func (s *ControllerApiServer) DeleteMonitoredPort(rw http.ResponseWriter, r *htt
 	var devPort *model.DevPort
 	json.NewDecoder(r.Body).Decode(&devPort)
 	s.ts.RemovePortToMonitor(devPort.Name)
-	//TODO Delete from buffer pool
-	//s.bp.RemoveMetric(devPort.Name, newEntry.Index, model.METRIC_EXT_VALUE)
 	rw.WriteHeader(http.StatusNoContent)
 }

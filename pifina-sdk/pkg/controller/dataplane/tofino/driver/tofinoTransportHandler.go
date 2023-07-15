@@ -156,7 +156,7 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 
 	var dataFields []*bfruntime.DataField
 	for _, dataName := range dataNames {
-		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
+		dataId, _ := driver.GetSingletonDataIdLikeName(tblName, dataName)
 		if dataId == 0 {
 			return nil, &model.ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
 		}
@@ -210,6 +210,12 @@ func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Enti
 	if !driver.isConnected {
 		return nil, &model.ErrNotReady{Msg: "Not connected to Tofino"}
 	}
+	// Only single access to device allowed.
+	// Otherwise undefined behaviour of Tofino device could occur
+	// pipe_mgr could complains that a batch is already in progress
+	driver.lock.Lock()
+	defer driver.lock.Unlock()
+
 	ctx, cancel := context.WithTimeout(driver.ctx, 5*time.Second)
 	defer cancel()
 	// Send read request
@@ -246,6 +252,9 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 	}
 
 	if driver.isConnected {
+		// Only single access to device allowed
+		driver.lock.Lock()
+		defer driver.lock.Unlock()
 		ctx, cancel := context.WithTimeout(driver.ctx, 5*time.Second)
 		defer cancel()
 		_, err := driver.client.Write(ctx, &writeReq)
@@ -257,36 +266,60 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 	return nil
 }
 
-// Enable Sync operation on register
-func (driver *TofinoDriver) EnableSyncOperationOnRegister(tblName string) error {
-	tblId := driver.GetTableIdByName(tblName)
-	if tblId == 0 {
-		return errors.New(fmt.Sprintf("Cannot find table id of %s", tblName))
-	}
+// Process metric responses and transform to metric item objects
+func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) ([]*model.MetricItem, error) {
+	// Transform response
+	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
+	timeNow := time.Now()
+	for i := range entities {
+		tblId := entities[i].GetTableEntry().GetTableId()
+		tableType := driver.GetTableTypeById(tblId)
+		// Process match action metrics
+		if tableType == TABLE_TYPE_MATCHACTION {
+			metric, err := driver.ProcessMatchActionResponse(entities[i])
+			if err != nil {
+				continue
+			}
+			for metric_i := range metric {
+				metric[metric_i].LastUpdated = timeNow
+			}
+			transformedMetrics = append(transformedMetrics, metric...)
+		}
 
-	tblEntry := &bfruntime.TableOperation{
-		TableId:             tblId,
-		TableOperationsType: "Sync",
-	}
+		// Process register metrics
+		if tableType == TABLE_TYPE_REGISTER {
+			metric, err := driver.ProcessRegisterResponse(entities[i])
+			if err != nil {
+				continue
+			}
+			metric.LastUpdated = timeNow
+			transformedMetrics = append(transformedMetrics, metric)
+		}
 
-	updateItems := []*bfruntime.Update{
-		{
-			Type: bfruntime.Update_INSERT,
-			Entity: &bfruntime.Entity{
-				Entity: &bfruntime.Entity_TableOperation{
-					TableOperation: tblEntry,
-				},
-			},
-		},
+		// Process Counter metrics
+		if tableType == TABLE_TYPE_COUNTER {
+			metric, err := driver.ProcessCounterResponse(entities[i])
+			if err != nil {
+				continue
+			}
+			for metric_i := range metric {
+				metric[metric_i].LastUpdated = timeNow
+			}
+			transformedMetrics = append(transformedMetrics, metric...)
+		}
+		// Process TM counters
+		if tableType == TABLE_TYPE_TM_CNT_IG || tableType == TABLE_TYPE_TM_CNT_EG {
+			metric, err := driver.ProcessTMCounters(entities[i])
+			if err != nil {
+				continue
+			}
+			for metric_i := range metric {
+				metric[metric_i].LastUpdated = timeNow
+			}
+			transformedMetrics = append(transformedMetrics, metric...)
+		}
 	}
-
-	err := driver.SendWriteRequest(updateItems)
-	if err != nil {
-		driver.logger.Error("Enable sync operation on register failed.", "register", tblName, "err", err)
-		return err
-	}
-	return nil
-
+	return transformedMetrics, nil
 }
 
 // Disconnects from Tofino switch
