@@ -15,21 +15,23 @@ import (
 )
 
 type TofinoController struct {
-	ctx       context.Context
-	logger    hclog.Logger
-	endpoint  string
-	p4name    string
-	driver    *driver.TofinoDriver
-	collector *collector.MetricCollector
-	ts        *trafficselector.TrafficSelector
-	sink      *sink.Sink
-	bp        *bufferpool.Bufferpool
-	api       *api.ControllerApiServer
+	ctx            context.Context
+	logger         hclog.Logger
+	endpoint       string
+	p4name         string
+	connectTimeout int
+	driver         *driver.TofinoDriver
+	collector      *collector.MetricCollector
+	ts             *trafficselector.TrafficSelector
+	sink           *sink.Sink
+	bp             *bufferpool.Bufferpool
+	api            *api.ControllerApiServer
 }
 
 type TofinoControllerOptions struct {
 	Logger                  hclog.Logger
 	Endpoint                string
+	ConnectTimeout          int
 	P4name                  string
 	CollectorServerEndpoint string
 	SampleInterval          int
@@ -42,29 +44,30 @@ func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
 	if options.Logger == nil {
 		return nil
 	}
-	driver := driver.NewTofinoDriver(options.Logger)
+	driver := driver.NewTofinoDriver(options.Logger, options.P4name)
 	ts := trafficselector.NewTrafficSelector(options.Logger, driver, options.LpfTimeConst)
 	collector := collector.NewMetricCollector(options.Logger, driver, options.SampleInterval, ts, options.PipelineCount)
 	bp := bufferpool.NewBufferpool(options.Logger, driver, ts)
 	apiServer := api.NewControllerApiServer(options.Logger, options.APIPort, ts, bp)
 	sink := sink.NewSink(options.Logger, options.CollectorServerEndpoint)
 	return &TofinoController{
-		logger:    options.Logger.Named("controller"),
-		driver:    driver,
-		collector: collector,
-		endpoint:  options.Endpoint,
-		p4name:    options.P4name,
-		sink:      sink,
-		ts:        ts,
-		bp:        bp,
-		api:       apiServer,
+		logger:         options.Logger.Named("controller"),
+		driver:         driver,
+		collector:      collector,
+		endpoint:       options.Endpoint,
+		p4name:         options.P4name,
+		connectTimeout: options.ConnectTimeout,
+		sink:           sink,
+		ts:             ts,
+		bp:             bp,
+		api:            apiServer,
 	}
 }
 
-func (controller *TofinoController) StartController(ctx context.Context, wg *sync.WaitGroup, connectTimeout int) error {
+func (controller *TofinoController) StartController(ctx context.Context, wg *sync.WaitGroup) error {
 	controller.ctx = ctx
 	// Connect to switch
-	err := controller.driver.Connect(ctx, controller.endpoint, controller.p4name, connectTimeout)
+	err := controller.driver.Connect(ctx, controller.endpoint, controller.connectTimeout)
 	if err != nil {
 		return err
 	}

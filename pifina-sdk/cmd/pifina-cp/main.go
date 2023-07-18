@@ -69,6 +69,7 @@ func main() {
 	options := &controller.TofinoControllerOptions{
 		Logger:                  logger,
 		Endpoint:                *bfrt_endpoint,
+		ConnectTimeout:          *connect_timeout,
 		P4name:                  *p4_name,
 		CollectorServerEndpoint: *collector_server,
 		SampleInterval:          *sample_interval,
@@ -77,7 +78,7 @@ func main() {
 		PipelineCount:           *pipeline_count,
 	}
 	controller := controller.NewTofinoController(options)
-	err = controller.StartController(ctx, &wg, *connect_timeout)
+	err = controller.StartController(ctx, &wg)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)
 	}

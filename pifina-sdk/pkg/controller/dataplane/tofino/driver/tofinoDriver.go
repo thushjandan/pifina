@@ -12,6 +12,7 @@ import (
 
 type TofinoDriver struct {
 	logger               hclog.Logger
+	p4Name               string
 	isConnected          bool
 	conn                 *grpc.ClientConn
 	client               bfruntime.BfRuntimeClient
@@ -68,11 +69,12 @@ const (
 var PROBE_TABLES = []string{PROBE_INGRESS_MATCH_CNT, PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_START_CNT, PROBE_EGRESS_END_CNT, PROBE_INGRESS_JITTER_LPF, PROBE_INGRESS_JITTER_REGISTER}
 
 // Creates new Tofino driver object
-func NewTofinoDriver(logger hclog.Logger) *TofinoDriver {
+func NewTofinoDriver(logger hclog.Logger, p4Name string) *TofinoDriver {
 	return &TofinoDriver{
 		logger:        logger.Named("tofinoDriver"),
+		p4Name:        p4Name,
 		isConnected:   false,
-		clientId:      uint32(rand.Intn(100)),
+		clientId:      uint32(rand.Intn(100) + 1),
 		probeTableMap: make(map[string]string),
 	}
 }

@@ -14,7 +14,7 @@ import (
 )
 
 // Connects to a tofino switch.
-func (driver *TofinoDriver) Connect(ctx context.Context, endpoint string, p4name string, connectTimeout int) error {
+func (driver *TofinoDriver) Connect(ctx context.Context, endpoint string, connectTimeout int) error {
 	// If a connection already exists, then return
 	if driver.isConnected {
 		return nil
@@ -41,17 +41,12 @@ func (driver *TofinoDriver) Connect(ctx context.Context, endpoint string, p4name
 
 	driver.ctx, driver.cancel = context.WithCancel(ctx)
 
-	// Open stream channel
+	// Open stream channel to associate my client id with device id
 	driver.streamChannel, err = driver.client.StreamChannel(driver.ctx)
 
 	reqSub := bfruntime.StreamMessageRequest_Subscribe{
 		Subscribe: &bfruntime.Subscribe{
 			DeviceId: 0,
-			Notifications: &bfruntime.Subscribe_Notifications{
-				EnablePortStatusChangeNotifications: false,
-				EnableIdletimeoutNotifications:      true,
-				EnableLearnNotifications:            false,
-			},
 		},
 	}
 
@@ -67,25 +62,7 @@ func (driver *TofinoDriver) Connect(ctx context.Context, endpoint string, p4name
 
 	driver.isConnected = true
 
-	// Bind client
-	reqFPCfg := bfruntime.SetForwardingPipelineConfigRequest{
-		ClientId: driver.clientId,
-		DeviceId: 0,
-		Action:   bfruntime.SetForwardingPipelineConfigRequest_BIND,
-	}
-	reqFPCfg.Config = append(reqFPCfg.Config, &bfruntime.ForwardingPipelineConfig{P4Name: p4name})
-
-	var setForwardPipelineConfigResponse *bfruntime.SetForwardingPipelineConfigResponse
-	setForwardPipelineConfigResponse, err = driver.client.SetForwardingPipelineConfig(driver.ctx, &reqFPCfg)
-
-	if setForwardPipelineConfigResponse == nil || setForwardPipelineConfigResponse.GetSetForwardingPipelineConfigResponseType() != bfruntime.SetForwardingPipelineConfigResponseType_WARM_INIT_STARTED {
-		driver.Disconnect()
-		return errors.New(fmt.Sprintf("tofino ASIC driver: Warm Init Failed : %s", err))
-	}
-
-	driver.logger.Info("Warm INIT Started")
-
-	// Request Runtome CFG
+	// Request runtime configuration
 	reqGFPCfg := bfruntime.GetForwardingPipelineConfigRequest{
 		ClientId: driver.clientId,
 		DeviceId: 0,
@@ -198,6 +175,7 @@ func (driver *TofinoDriver) SendReadRequestByPipeId(tblEntries []*bfruntime.Enti
 
 	readReq := &bfruntime.ReadRequest{
 		ClientId: driver.clientId,
+		P4Name:   driver.p4Name,
 		Entities: tblEntries,
 		Target: &bfruntime.TargetDevice{
 			DeviceId:  0,
@@ -241,6 +219,7 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 
 	writeReq := bfruntime.WriteRequest{
 		ClientId:  driver.clientId,
+		P4Name:    driver.p4Name,
 		Atomicity: bfruntime.WriteRequest_CONTINUE_ON_ERROR,
 		Target: &bfruntime.TargetDevice{
 			DeviceId:  0,
