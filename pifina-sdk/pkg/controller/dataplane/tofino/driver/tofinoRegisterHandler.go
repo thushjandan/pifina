@@ -3,6 +3,7 @@ package driver
 import (
 	"encoding/binary"
 	"strings"
+	"time"
 
 	"github.com/thushjandan/pifina/internal/dataplane/tofino/protos/bfruntime"
 	"github.com/thushjandan/pifina/pkg/model"
@@ -10,25 +11,25 @@ import (
 
 // Retrieve Ingress End header byte counter by a list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) GetIngressHdrStartCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	return driver.GetHdrSizeCounter(PROBE_INGRESS_START_HDR_SIZE, sessionIds)
 }
 
 // Retrieve Ingress End header byte counter by a list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) GetIngressHdrEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	return driver.GetHdrSizeCounter(PROBE_INGRESS_END_HDR_SIZE, sessionIds)
 }
 
 // Retrieve Egress End packet byte counter by a list of sessionIds.
 // Retrieve byte count from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) GetEgressEndCounter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	return driver.GetHdrSizeCounter(PROBE_EGRESS_END_CNT, sessionIds)
 }
 
 // Retrieve header byte counter by a short table name and list of sessionIds.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetHdrSizeCounter(shortTblName string, sessionIds []uint32) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) GetHdrSizeCounter(shortTblName string, sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Trace("Requesting header byte counter", "tblName", shortTblName, "sessionIds", sessionIds)
 
 	if len(sessionIds) == 0 {
@@ -43,14 +44,23 @@ func (driver *TofinoDriver) GetHdrSizeCounter(shortTblName string, sessionIds []
 
 	registersToReq := driver.transformSessionIdToAppRegister(sessionIds, tblName)
 
-	requests, err := driver.GetMetricFromRegisterRequest(registersToReq, model.METRIC_BYTES)
+	// Retrieve register values for selected sessionId
+	metrics, err := driver.GetMetricFromRegister(registersToReq, model.METRIC_BYTES)
+	// If no errors have occured, reset the register
+	if err == nil {
+		// Reset register values
+		driver.ResetRegister(sessionIds, shortTblName)
+		for i := range metrics {
+			metrics[i].MetricName = shortTblName
+		}
+	}
 
-	return requests, err
+	return metrics, err
 }
 
 // Collect ingress jitter value from register.
 // The byte counter are retrieved from a 32-bit register as the stateful ALU supports only values up to 32-bits.
-func (driver *TofinoDriver) GetIngressJitter(sessionIds []uint32) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) GetIngressJitter(sessionIds []uint32) ([]*model.MetricItem, error) {
 	driver.logger.Trace("Requesting ingress jitter", "sessionIds", sessionIds)
 
 	if len(sessionIds) == 0 {
@@ -65,13 +75,22 @@ func (driver *TofinoDriver) GetIngressJitter(sessionIds []uint32) ([]*bfruntime.
 
 	registersToReq := driver.transformSessionIdToAppRegister(sessionIds, tblName)
 
-	requests, err := driver.GetMetricFromRegisterRequest(registersToReq, model.METRIC_BYTES)
+	// Retrieve register values for selected sessionId
+	metrics, err := driver.GetMetricFromRegister(registersToReq, model.METRIC_EXT_VALUE)
+	// If no errors have occured, reset the register
+	if err == nil {
+		for i := range metrics {
+			metrics[i].MetricName = PROBE_INGRESS_JITTER_REGISTER
+			// Convert ns to microsecond
+			metrics[i].Value = metrics[i].Value / 1000
+		}
+	}
 
-	return requests, err
+	return metrics, err
 }
 
 // Retrieves register values by a list of appRegister structs, which are used as index.
-func (driver *TofinoDriver) GetMetricFromRegisterRequest(appRegisters []*model.AppRegister, metricType string) ([]*bfruntime.Entity, error) {
+func (driver *TofinoDriver) GetMetricFromRegister(appRegisters []*model.AppRegister, metricType string) ([]*model.MetricItem, error) {
 	tblEntries := []*bfruntime.Entity{}
 
 	for i := range appRegisters {
@@ -118,34 +137,82 @@ func (driver *TofinoDriver) GetMetricFromRegisterRequest(appRegisters []*model.A
 		)
 	}
 
-	return tblEntries, nil
-}
+	// Send read request to switch.
+	entities, err := driver.SendReadRequest(tblEntries)
+	if err != nil {
+		return nil, err
+	}
 
-func (driver *TofinoDriver) GetResetRegisterRequest(sessionIds []uint32) []*bfruntime.Update {
-	allResetReq := make([]*bfruntime.Update, 0)
-	shortTblNames := []string{PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_END_CNT}
-	extraProbes := driver.GetExtraProbes()
-	shortTblNames = append(extraProbes, shortTblNames...)
-	// Build reset request
-	for _, shortTblName := range shortTblNames {
-		tblName := driver.FindTableNameByShortName(shortTblName)
-		_, dataName := driver.GetSingletonDataIdLikeName(tblName, shortTblName)
-		dataWidth := driver.GetSingletonDataWidthByName(tblName, dataName)
-		dataWidth = dataWidth / 8
-		for _, id := range sessionIds {
-			resetReq, err := driver.getIndirectCounterResetRequest(shortTblName, REGISTER_INDEX_KEY_NAME, id, []string{shortTblName}, int(dataWidth))
-			if err != nil {
-				driver.logger.Error("cannot build bfrt reset request", "tblName", shortTblName, "err", err)
-				continue
+	// Transform response
+	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
+	timeNow := time.Now()
+	for i := range entities {
+		// Get sessionId from key field.
+		sessionId := binary.BigEndian.Uint32(entities[i].GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
+		dataEntries := entities[i].GetTableEntry().GetData().GetFields()
+		tblName := driver.GetTableNameById(entities[i].GetTableEntry().GetTableId())
+
+		for data_i := range dataEntries {
+			// Dataplane could return just a single byte instead of 4 bytes.
+			// So we copy the response in a 4 byte slice.
+			rawValue := dataEntries[data_i].GetStream()
+			var decodedValue uint64
+			// Check if data value is 64-bit or 32 bit
+			if len(rawValue) == 8 {
+				if strings.Contains(tblName, PROBE_INGRESS_JITTER_REGISTER) {
+					buffer := make([]byte, 4)
+					copy(buffer[:], rawValue[0:3])
+					decodedValue = uint64(binary.BigEndian.Uint32(buffer))
+				} else {
+					decodedValue = binary.BigEndian.Uint64(rawValue)
+				}
 			} else {
-				allResetReq = append(allResetReq, &bfruntime.Update{
-					Type:   bfruntime.Update_MODIFY,
-					Entity: resetReq,
-				})
+				buffer := make([]byte, 4)
+				copy(buffer[len(buffer)-len(rawValue):], rawValue)
+				decodedValue = uint64(binary.BigEndian.Uint32(buffer))
 			}
+
+			// Skip loop if value is 0
+			if decodedValue == 0 && data_i != 0 {
+				continue
+			}
+
+			transformedMetrics = append(transformedMetrics, &model.MetricItem{
+				SessionId:   sessionId,
+				Value:       decodedValue,
+				Type:        metricType,
+				MetricName:  tblName,
+				LastUpdated: timeNow,
+			})
 		}
 	}
-	return allResetReq
+
+	return transformedMetrics, nil
+}
+
+func (driver *TofinoDriver) ResetRegister(sessionIds []uint32, shortTbleName string) {
+	registerValueByteSize := 4
+	allResetReq := make([]*bfruntime.Update, 0)
+	// Build reset request
+	for _, id := range sessionIds {
+		resetReq, err := driver.getIndirectCounterResetRequest(shortTbleName, REGISTER_INDEX_KEY_NAME, id, []string{shortTbleName}, registerValueByteSize)
+		if err != nil {
+			driver.logger.Error("cannot build bfrt reset request", "tblName", shortTbleName, "err", err)
+			continue
+		} else {
+			allResetReq = append(allResetReq, &bfruntime.Update{
+				Type:   bfruntime.Update_MODIFY,
+				Entity: resetReq,
+			})
+		}
+	}
+	if len(allResetReq) > 0 {
+		// Send reset requests
+		err := driver.SendWriteRequest(allResetReq)
+		if err != nil {
+			driver.logger.Error("Register reset has failed", "tblName", shortTbleName, "err", err)
+		}
+	}
 }
 
 // Returns from cache all available registers on device.
@@ -172,53 +239,4 @@ func (driver *TofinoDriver) transformSessionIdToAppRegister(sessionIds []uint32,
 	}
 
 	return registerToRequest
-}
-
-func (driver *TofinoDriver) ProcessRegisterResponse(entity *bfruntime.Entity) (*model.MetricItem, error) {
-	tblName := driver.GetTableNameById(entity.GetTableEntry().GetTableId())
-	// Get sessionId from key field.
-	sessionId := binary.BigEndian.Uint32(entity.GetTableEntry().GetKey().GetFields()[0].GetExact().GetValue())
-	dataEntries := entity.GetTableEntry().GetData().GetFields()
-	for data_i := range dataEntries {
-		// Dataplane could return just a single byte instead of 4 bytes.
-		// So we copy the response in a 4 byte slice.
-		rawValue := dataEntries[data_i].GetStream()
-		var decodedValue uint64
-		if len(rawValue) == 8 {
-			if strings.Contains(tblName, PROBE_INGRESS_JITTER_REGISTER) {
-				buffer := make([]byte, 4)
-				copy(buffer[:], rawValue[0:3])
-				decodedValue = uint64(binary.BigEndian.Uint32(buffer))
-			} else {
-				decodedValue = binary.BigEndian.Uint64(rawValue)
-			}
-		} else {
-			buffer := make([]byte, 4)
-			copy(buffer[len(buffer)-len(rawValue):], rawValue)
-			decodedValue = uint64(binary.BigEndian.Uint32(buffer))
-		}
-
-		// Replace full tblname with short name
-		shortTblName := driver.FindShortTableNameByName(tblName)
-		if shortTblName != "" {
-			tblName = shortTblName
-		}
-
-		metricType := model.METRIC_EXT_VALUE
-		switch tblName {
-		case PROBE_INGRESS_START_HDR_SIZE, PROBE_INGRESS_END_HDR_SIZE, PROBE_EGRESS_END_CNT:
-			metricType = model.METRIC_BYTES
-		default:
-			metricType = model.METRIC_EXT_VALUE
-		}
-
-		return &model.MetricItem{
-			SessionId:  sessionId,
-			Value:      uint64(decodedValue),
-			Type:       metricType,
-			MetricName: tblName,
-		}, nil
-	}
-
-	return nil, nil
 }

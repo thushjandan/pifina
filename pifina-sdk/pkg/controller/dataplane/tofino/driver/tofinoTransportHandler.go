@@ -156,7 +156,7 @@ func (driver *TofinoDriver) getIndirectCounterResetRequest(shortTblName string, 
 
 	var dataFields []*bfruntime.DataField
 	for _, dataName := range dataNames {
-		dataId, _ := driver.GetSingletonDataIdLikeName(tblName, dataName)
+		dataId := driver.GetSingletonDataIdLikeName(tblName, dataName)
 		if dataId == 0 {
 			return nil, &model.ErrNameNotFound{Msg: "Cannot data name to reset the counter", Entity: dataName}
 		}
@@ -264,62 +264,6 @@ func (driver *TofinoDriver) SendWriteRequest(updateItems []*bfruntime.Update) er
 	}
 
 	return nil
-}
-
-// Process metric responses and transform to metric item objects
-func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) ([]*model.MetricItem, error) {
-	// Transform response
-	transformedMetrics := make([]*model.MetricItem, 0, len(entities))
-	timeNow := time.Now()
-	for i := range entities {
-		tblId := entities[i].GetTableEntry().GetTableId()
-		tableType := driver.GetTableTypeById(tblId)
-		// Process match action metrics
-		if tableType == TABLE_TYPE_MATCHACTION {
-			metric, err := driver.ProcessMatchActionResponse(entities[i])
-			if err != nil {
-				continue
-			}
-			for metric_i := range metric {
-				metric[metric_i].LastUpdated = timeNow
-			}
-			transformedMetrics = append(transformedMetrics, metric...)
-		}
-
-		// Process register metrics
-		if tableType == TABLE_TYPE_REGISTER {
-			metric, err := driver.ProcessRegisterResponse(entities[i])
-			if err != nil {
-				continue
-			}
-			metric.LastUpdated = timeNow
-			transformedMetrics = append(transformedMetrics, metric)
-		}
-
-		// Process Counter metrics
-		if tableType == TABLE_TYPE_COUNTER {
-			metric, err := driver.ProcessCounterResponse(entities[i])
-			if err != nil {
-				continue
-			}
-			for metric_i := range metric {
-				metric[metric_i].LastUpdated = timeNow
-			}
-			transformedMetrics = append(transformedMetrics, metric...)
-		}
-		// Process TM counters
-		if tableType == TABLE_TYPE_TM_CNT_IG || tableType == TABLE_TYPE_TM_CNT_EG {
-			metric, err := driver.ProcessTMCounters(entities[i])
-			if err != nil {
-				continue
-			}
-			for metric_i := range metric {
-				metric[metric_i].LastUpdated = timeNow
-			}
-			transformedMetrics = append(transformedMetrics, metric...)
-		}
-	}
-	return transformedMetrics, nil
 }
 
 // Disconnects from Tofino switch

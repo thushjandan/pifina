@@ -16,7 +16,6 @@ func (driver *TofinoDriver) createP4TableIndex() {
 		for _, probe := range PROBE_TABLES {
 			if strings.Contains(name, probe) {
 				driver.probeTableMap[probe] = name
-				driver.probeTableMap[name] = probe
 				break
 			}
 		}
@@ -26,7 +25,6 @@ func (driver *TofinoDriver) createP4TableIndex() {
 			shortTblName := tblNameSplit[len(tblNameSplit)-1]
 			// Add the short name to the table cache
 			driver.probeTableMap[shortTblName] = name
-			driver.probeTableMap[name] = shortTblName
 			// Track extra probes separately
 			driver.extraProbeNameCache = append(driver.extraProbeNameCache, shortTblName)
 		}
@@ -111,11 +109,6 @@ func (driver *TofinoDriver) FindTableNameByShortName(shortName string) string {
 	return ""
 }
 
-// e.g. pipe.SwitchEgress.pfEgressStartProbe.PF_EGRESS_START_CNT => PF_EGRESS_START_CNT
-func (driver *TofinoDriver) FindShortTableNameByName(fullName string) string {
-	return driver.FindTableNameByShortName(fullName)
-}
-
 func (driver *TofinoDriver) GetKeyIdByName(tblName, keyName string) uint32 {
 	keyId := uint32(0)
 	// Find table name in index
@@ -169,20 +162,6 @@ func (driver *TofinoDriver) GetActionDataWidthByName(tblName, actionName string,
 		}
 	}
 	return actionDataWidth
-}
-
-func (driver *TofinoDriver) GetSingletonDataWidthByName(tblName, dataName string) uint32 {
-	dataWidth := uint32(0)
-	// Find table name in index
-	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
-		// Table name has been found in hash table
-		for dataIdx := range driver.P4Tables[sliceIdx].Data {
-			if driver.P4Tables[sliceIdx].Data[dataIdx].Singleton.Name == dataName {
-				return driver.P4Tables[sliceIdx].Data[dataIdx].Singleton.Type.Width
-			}
-		}
-	}
-	return dataWidth
 }
 
 // Find full action name of an action.
@@ -269,20 +248,19 @@ func (driver *TofinoDriver) GetSingletonDataNameById(tblName string, dataId uint
 	return dataName
 }
 
-func (driver *TofinoDriver) GetSingletonDataIdLikeName(tblName, shortDataName string) (uint32, string) {
+func (driver *TofinoDriver) GetSingletonDataIdLikeName(tblName, shortDataName string) uint32 {
 	dataId := uint32(0)
-	dataName := ""
 	// Find table name in index
 	if sliceIdx, ok := driver.indexP4Tables[tblName]; ok {
 		// Table name has been found in hash table
 		for dataIdx := range driver.P4Tables[sliceIdx].Data {
 			dataObj := driver.P4Tables[sliceIdx].Data[dataIdx]
 			if strings.Contains(dataObj.Singleton.Name, shortDataName) {
-				return dataObj.Singleton.Id, dataObj.Singleton.Name
+				return dataObj.Singleton.Id
 			}
 		}
 	}
-	return dataId, dataName
+	return dataId
 }
 
 func (driver *TofinoDriver) GetExtraProbes() []string {
