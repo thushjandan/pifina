@@ -11,9 +11,14 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/internal/utils"
 	"github.com/thushjandan/pifina/pkg/controller"
 	"github.com/thushjandan/pifina/pkg/debugserver"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func main() {
@@ -25,14 +30,14 @@ func main() {
 	api_port := flag.String("port", ":8656", "Controller API port to listen")
 	version_flag := flag.Bool("version", false, "show version")
 	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
-	sample_interval := flag.Int("sample-interval-ms", 200, "Sample interval in ms. Default 100ms")
+	sample_interval := flag.Int("sample-interval-ms", 50, "Sample interval in ms. Default 100ms")
 	lpf_time_constant_int := flag.Int("lpf-time-ns", 80, "LPF time constant for computing moving average of the ingress jitter value.")
 	pipeline_count := flag.Int("pipe-count", 4, "Amount of pipeline existing on the tofino. Used to retrieve TrafficManager metrics per pipeline.")
 
 	flag.Parse()
 
 	if *version_flag {
-		fmt.Printf("version=%s", utils.Commit)
+		fmt.Printf("pifina-cp (PIFINA control plane) version %s, commit %s, built at %s\n", version, commit, date)
 		os.Exit(0)
 	}
 

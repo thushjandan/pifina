@@ -18,13 +18,19 @@ const (
 	SESSION_ID_WIDTH = 7
 )
 
-var P4_MATCH_TYPES = []string{"exact", "ternary", "lpm"}
+var (
+	version        = "dev"
+	commit         = "none"
+	date           = time.Now().Format(time.RFC3339)
+	P4_MATCH_TYPES = []string{"exact", "ternary", "lpm"}
+)
 
 func main() {
+	compiled_date, _ := time.Parse(time.RFC3339, date)
 	app := &cli.App{
 		Name:     "pifina-cli",
-		Version:  "0.0.1",
-		Compiled: time.Now(),
+		Version:  version,
+		Compiled: compiled_date,
 		Authors: []*cli.Author{
 			{
 				Name:  "Thushjandan Ponnudurai",

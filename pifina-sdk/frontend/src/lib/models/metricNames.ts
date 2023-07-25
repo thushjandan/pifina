@@ -43,11 +43,11 @@ export const PIFINA_PROBE_CHART_CFG = {
     },
     [PROBE_INGRESS_START_HDR_BYTE]: {
         yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "Start egress byte counter"
+        title: "Start ingress header size counter"
     },
     [PROBE_INGRESS_END_HDR_BYTE]: {
         yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "End egress byte counter"
+        title: "End ingress header size counter"
     },
     [PROBE_EGRESS_START_CNT_BYTE]: {
         yAxisName: Y_AXIS_NAME_BYTE_RATE,
@@ -63,7 +63,7 @@ export const PIFINA_PROBE_CHART_CFG = {
     },
     [PROBE_INGRESS_JITTER]: {
         yAxisName: Y_AXIS_NAME_TIME_MS,
-        title: "Moving average ingress jitter"
+        title: "Ingress inter packet arrival average rate"
     },
     [PROBE_TM_INGRESS_DROP_PKT]: {
         yAxisName: Y_AXIS_NAME_PKT_COUNT,

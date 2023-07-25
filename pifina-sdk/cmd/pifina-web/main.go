@@ -9,11 +9,16 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/internal/utils"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/web/endpoints"
 	"github.com/thushjandan/pifina/pkg/web/http"
 	"github.com/thushjandan/pifina/pkg/web/receiver"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 func main() {
@@ -29,7 +34,7 @@ func main() {
 	flag.Parse()
 
 	if *version_flag {
-		fmt.Printf("version=%s", utils.Commit)
+		fmt.Printf("pifina-web (PIFINA telemetry server) version %s, commit %s, built at %s\n", version, commit, date)
 		os.Exit(0)
 	}
 

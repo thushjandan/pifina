@@ -23,7 +23,7 @@ control PfIngressStartProbe(in {{ .IngressHeaderType }} hdr, inout pf_ingress_me
 
     // Header byte counter before TM
     @name("PF_INGRESS_START_HDR_SIZE")
-    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressStartByteRegister; 
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE, 0) pfIngressStartByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressStartByteRegister) pfIngressStartByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
             // Increment counter by packet header size
@@ -70,7 +70,7 @@ control PfIngressStartProbe(in {{ .IngressHeaderType }} hdr, inout pf_ingress_me
 control PfIngressEndProbe(inout {{ .IngressHeaderType }} hdr, inout pf_ingress_metadata_t meta, in ingress_intrinsic_metadata_t ig_intr_md) {
     // Header byte counter BEFORE deparser
     @name("PF_INGRESS_END_HDR_SIZE")
-    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfIngressEndByteRegister; 
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE, 0) pfIngressEndByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfIngressEndByteRegister) pfIngressEndByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
             // Increment counter by packet header size
@@ -79,7 +79,7 @@ control PfIngressEndProbe(inout {{ .IngressHeaderType }} hdr, inout pf_ingress_m
     };
 
     // Store current timestamp for later latency computation.
-    Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE) pfPreviousTstamp; 
+    Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE, 0) pfPreviousTstamp; 
     RegisterAction<bit<64>, pf_stats_width_t, bit<48>>(pfPreviousTstamp) pfPreviousTstampAction = {
         void apply(inout bit<64> tstamp, out bit<48> result) {
             // Compute latency between current packet and the previous packet
@@ -90,7 +90,7 @@ control PfIngressEndProbe(inout {{ .IngressHeaderType }} hdr, inout pf_ingress_m
     };
 
     @name("PF_INGRESS_JITTER_AVG")
-    Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE) pfJitterRegister; 
+    Register<bit<64>, pf_stats_width_t>(PF_TABLE_SIZE, 0) pfJitterRegister; 
     RegisterAction<bit<64>, pf_stats_width_t, void>(pfJitterRegister) pfJitterRegisterAction = {
         void apply(inout bit<64> value) {
             // Store current jitter with a padding
@@ -158,7 +158,7 @@ control PfEgressStartProbe(in {{ .EgressHeaderType }} hdr, inout pf_egress_metad
 control PfEgressEndProbe(in {{ .EgressHeaderType }} hdr, inout pf_egress_metadata_t meta) {
     // Header byte counter BEFORE deparser
     @name("PF_EGRESS_END_CNT")
-    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE) pfEgressEndByteRegister; 
+    Register<bit<32>, pf_stats_width_t>(PF_TABLE_SIZE, 0) pfEgressEndByteRegister; 
     RegisterAction<bit<32>, pf_stats_width_t, void>(pfEgressEndByteRegister) pfEgressEndByteRegisterAction = {
         void apply(inout bit<32> byteCount) {
             byteCount = byteCount + meta.pfPacketLength;

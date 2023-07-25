@@ -4,22 +4,13 @@
 *
 * Copyright 2023 Thushjandan Ponnudurai
 
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
+* This software may be modified and distributed under the terms
+* of the MIT license.  See the LICENSE file for details.
 */
 
 #include <core.p4>
 /* TOFINO Native architecture */
-#include <t2na.p4>
+#include <tna.p4>
 
 // PIFINA: Step 1: Include header files
 #include "include/pifina_headers.p4"
@@ -166,6 +157,8 @@ control SwitchIngress(inout ingress_headers_t hdr,
     // PIFINA: Step 6: Initialize Pifina control blocks
     PfIngressStartProbe() pfIngressStartProbe;
     PfIngressEndProbe() pfIngressEndProbe;
+    PfIngressExtraProbe01() pfIngressExtraProbe01;
+    PfIngressExtraProbe02() pfIngressExtraProbe02;
 
     // Initialize hash table with value 0
     Register<bit<8>, PortId_t>(512, 0) database;
@@ -201,8 +194,12 @@ control SwitchIngress(inout ingress_headers_t hdr,
 
         // Run IPv4 routing logic.
         ipv4_lpm.apply();
+        
+        pfIngressExtraProbe01.apply(hdr, meta.pf_meta);
         // Dummy register write
         database.write(ig_tm_md.ucast_egress_port, hdr.ipv4.ttl);
+
+        pfIngressExtraProbe02.apply(hdr, meta.pf_meta);
 
         // PIFINA: Step 8: last Operation
         pfIngressEndProbe.apply(hdr, meta.pf_meta, ig_intr_md);
@@ -224,10 +221,13 @@ control SwitchEgress(inout egress_headers_t hdr,
     // PIFINA: Step 9: Initialize PIFINA probes
     PfEgressStartProbe() pfEgressStartProbe;
     PfEgressEndProbe() pfEgressEndProbe;
+    PfEgressExtraProbe01() pfEgressExtraProbe01;
 
     apply {
         // PIFINA: Step 9: Start Egress measurement. Using count leaving TM
         pfEgressStartProbe.apply(hdr, meta.pf_meta, eg_intr_md);
+
+        pfEgressExtraProbe01.apply(hdr, meta.pf_meta);
 
         // PIFINA: Step 10: End Egress measurement. Using count from deparser
         pfEgressEndProbe.apply(hdr, meta.pf_meta);

@@ -104,7 +104,6 @@ func (collector *MetricCollector) CollectMetrics(ctx context.Context, wg *sync.W
 				}
 			}
 			bfResponse, err := collector.driver.SendReadRequest(allMetricRequests)
-			collector.logger.Debug("Time collection after sending read", "time", time.Since(start))
 			if err != nil {
 				collector.logger.Error("Error occured during collection", "err", err)
 			}
