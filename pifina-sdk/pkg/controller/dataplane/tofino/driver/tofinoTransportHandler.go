@@ -256,7 +256,7 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 		// Process match action metrics
 		if tableType == TABLE_TYPE_MATCHACTION {
 			metric, err := driver.ProcessMatchActionResponse(entities[i])
-			if err != nil {
+			if err != nil || len(metric) == 0 {
 				continue
 			}
 			for metric_i := range metric {
@@ -268,7 +268,7 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 		// Process register metrics
 		if tableType == TABLE_TYPE_REGISTER {
 			metric, err := driver.ProcessRegisterResponse(entities[i])
-			if err != nil {
+			if err != nil || metric == nil {
 				continue
 			}
 			metric.LastUpdated = timeNow
@@ -278,7 +278,7 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 		// Process Counter metrics
 		if tableType == TABLE_TYPE_COUNTER {
 			metric, err := driver.ProcessCounterResponse(entities[i])
-			if err != nil {
+			if err != nil || len(metric) == 0 {
 				continue
 			}
 			for metric_i := range metric {
@@ -289,7 +289,7 @@ func (driver *TofinoDriver) ProcessMetricResponse(entities []*bfruntime.Entity) 
 		// Process TM counters
 		if tableType == TABLE_TYPE_TM_CNT_IG || tableType == TABLE_TYPE_TM_CNT_EG {
 			metric, err := driver.ProcessTMCounters(entities[i])
-			if err != nil {
+			if err != nil || len(metric) == 0 {
 				continue
 			}
 			for metric_i := range metric {
