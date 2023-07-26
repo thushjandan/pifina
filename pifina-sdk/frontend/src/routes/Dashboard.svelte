@@ -219,8 +219,8 @@
 				width: clientHalfScreenWidth,
 				color: {legend: true, type: "categorical"},
 				marks: [
-					Plot.line(metricData[subProbeItem], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: (d) => `Start: ${d.sessionId}`, marker: "dot"}),
-					Plot.tip(metricData[subProbeItem], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, title: (d) => `Start byte counter for session ${d.sessionId}\n\n${d.value} bytes/sec`, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
+					Plot.line(metricData[subProbeItem], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: 'sessionId', marker: "dot"}),
+					Plot.tip(metricData[subProbeItem], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
 				]
 			}} />
 		</div>

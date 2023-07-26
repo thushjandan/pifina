@@ -70,49 +70,70 @@
         Create new rule
     <span class="sr-only">Create new rule</span>
     </button>
-    <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-        <thead class="text-xs text-gray-700 bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <tr>
-                <th scope="col" class="px-6 py-3">Session ID</th>
-                {#each matchSelectorSchema as entry (entry.id)}
-                {#if entry.matchType == MATCH_TYPE_LPM }
-                <th scope="col" class="px-6 py-3 border-l dark:border-gray-700">{entry.name} - ({entry.matchType})</th>
-                <th scope="col" class="px-6 py-3 border-r dark:border-gray-700">Prefix Length</th>
-                {:else if entry.matchType == MATCH_TYPE_TERNARY }
-                <th scope="col" class="px-6 py-3 border-l dark:border-gray-700">{entry.name} - ({entry.matchType})</th>
-                <th scope="col" class="px-6 py-3 border-r dark:border-gray-700">Mask</th>
-                {:else}
-                <th scope="col" class="px-6 py-3">{entry.name}- ({entry.matchType})</th>
-                {/if}
-                {/each}
-                <th scope="col" class="px-6 py-3">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each data as entry }
-            <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                <td class="px-6 py-4 font-bold bg-slate-100">{entry.sessionId}</td>
+    <div class="grid lg:grid-cols-3 md:grid-cols-2 sm:grid-cols-1">
+        {#each data as entry }
+        <div class="sm:col-span-1 mx-4 my-4">
+            <div class="max-w-sm p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Session {entry.sessionId}</h5>
+                    <button type="button" title="Delete rule" on:click={() => showConfirmModal(entry)} class="inline-flex items-center px-4 py-3 text-sm font-medium text-center text-white bg-red-600 rounded-lg hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-2">
                 {#each entry.keys.filter(elem => matchSelectorSchema.find(key => key.id == elem.fieldId)) as selectorKey (selectorKey.fieldId) }
                 {@const schemaItem = matchSelectorSchema.find(elem => selectorKey.fieldId == elem.id)}
                 {#if schemaItem?.matchType == MATCH_TYPE_LPM}
-                <td class="px-6 py-4 border-l dark:border-gray-700">0x{selectorKey.value}</td>
-                <td class="px-6 py-4 border-r dark:border-gray-700">{selectorKey.prefixLength}</td>
+                <div class="sm:col-span-2 my-1">
+                    <p class="text-lg font-normal text-gray-700 dark:text-gray-400"></p><h6>{schemaItem.name} ({schemaItem.matchType})</h6>
+                </div>
+                <div class="sm:col-span-1 mb-1">
+                    <p class="font-normal text-gray-700 dark:text-gray-400">Value:</p>
+                </div>
+                <div class="sm:col-span-1 mb-1">
+                    <p class="tracking-wider">0x{selectorKey.value}</p>
+                </div>
+                <div class="sm:col-span-1 mb-2">
+                    <p class="font-normal text-gray-700 dark:text-gray-400">Prefix length:</p>
+                </div>
+                <div class="sm:col-span-1 mb-2">
+                    <p class="tracking-wider">{selectorKey.prefixLength}</p>
+                </div>
                 {:else if schemaItem?.matchType == MATCH_TYPE_TERNARY}
-                <td class="px-6 py-4 border-l dark:border-gray-700">0x{selectorKey.value}</td>
-                <td class="px-6 py-4 border-r dark:border-gray-700">0x{selectorKey.valueMask}</td>
+                <div class="sm:col-span-2 mb-1">
+                    <p class="text-lg font-normal text-gray-700 dark:text-gray-400">{schemaItem.name} ({schemaItem.matchType})</p>
+                </div>
+                <div class="sm:col-span-1 mb-1">
+                    <p class="font-normal text-gray-700 dark:text-gray-400">Value:</p>
+                </div>
+                <div class="sm:col-span-1 mb-1">
+                    <p class="tracking-wider">0x{selectorKey.value}</p>
+                </div>
+                <div class="sm:col-span-1 mb-2">
+                    <p class="font-normal text-gray-700 dark:text-gray-400">Mask:</p>
+                </div>
+                <div class="sm:col-span-1 mb-2">
+                    <p class="tracking-wider">0x{selectorKey.valueMask}</p>
+                </div>
                 {:else}
-                <td class="px-6 py-4">0x{selectorKey.value}</td>
+                <div class="sm:col-span-2 mb-1">
+                    <p class="text-lg font-normal text-gray-700 dark:text-gray-400">{schemaItem?.name} ({schemaItem?.matchType})</p>
+                </div>
+                <div class="sm:col-span-1 mb-2">
+                    <p class="font-normal text-gray-700 dark:text-gray-400">Value: </p>
+                </div>
+                <div class="sm:col-span-1 mb-2">
+                    <p class="tracking-wider">0x{selectorKey.value}</p>
+                </div>
                 {/if}
                 {/each}
-                <td class="px-6 py-4">
-                    <button type="button" on:click={() => showConfirmModal(entry)} class="text-white text-center bg-red-600 hover:bg-red-800 font-medium rounded-lg text-sm w-full sm:w-auto px-2 py-1.5 text-center">
-                        Delete
-                    </button>
-                </td>
-            </tr>
-            {/each}
-        </tbody>
-    </table>
+                </div>
+            </div>
+        </div>
+        {/each}
+    </div>
 </div>
 
 <Modal bind:showModal={showModal} bind:closeModal={closeModal}>
