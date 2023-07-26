@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/pkg/endpoint"
 	"github.com/thushjandan/pifina/pkg/generator"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/urfave/cli/v2"
@@ -40,8 +41,8 @@ func main() {
 		Usage: "Customize P4 code with PIFINA cli to match on user-defined header fields.",
 		Commands: []*cli.Command{
 			{
-				Name:    "create",
-				Aliases: []string{"c"},
+				Name:    "generate",
+				Aliases: []string{"g"},
 				Usage:   `Example: pifina-cli create -k hdr.ipv4.protocol:exact -k hdr.ipv4.dstAddr:ternary -k hdr.ipv4.srcAddr:ternary -o src/myP4app/include `,
 				Description: `Creates customized Pifina P4 source code with user defined match fields. 
 Use for every match key the flag -key and define the name of the field together with its match type delimited by a colon (:) like field1:matchType
@@ -87,6 +88,19 @@ Following match types can be used: exact, ternary, lpm`,
 					},
 				},
 				Action: createAction,
+			},
+			{
+				Name:    "collect",
+				Aliases: []string{"c"},
+				Action:  listMlxDevices,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "level",
+						Value:    "info",
+						Required: false,
+						Usage:    "log level",
+					},
+				},
 			},
 		},
 	}
@@ -197,5 +211,31 @@ func createAction(cCtx *cli.Context) error {
 	}
 	logger.Info("All necessary PIFINA files have been generated. Include these files according to the manual in your P4 application source code.")
 
+	return nil
+}
+
+func listMlxDevices(cCtx *cli.Context) error {
+	logger := hclog.New(&hclog.LoggerOptions{
+		Name:  "PIFINA-cli",
+		Level: hclog.LevelFromString(cCtx.String("level")),
+		Color: hclog.AutoColor,
+	})
+	if os.Getuid() != 0 {
+		logger.Error("Need to be root. Please use sudo or run as root.")
+		os.Exit(1)
+		return nil
+	}
+
+	logger.Debug("Retrieving system devices")
+	collector := endpoint.NewEndpointCollector(&endpoint.EndpointCollectorOptions{
+		Logger:  logger,
+		SDKPath: "/opt/neohost/sdk",
+		NEOMode: "--mode=shell",
+	})
+	err := collector.ListMlxNetworkCards()
+	if err != nil {
+		logger.Error("Error occured retrieving all Connect-X NICs", "err", err)
+		return err
+	}
 	return nil
 }

@@ -3,6 +3,7 @@ module github.com/thushjandan/pifina
 go 1.20
 
 require (
+	github.com/cheynewallace/tabby v1.1.1
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/r3labs/sse/v2 v2.10.0
