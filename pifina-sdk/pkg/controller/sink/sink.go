@@ -57,9 +57,31 @@ func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*mode
 
 // Transforms the payload to protobuf and sends to pifina server
 func (s *Sink) Emit(metrics []*model.MetricItem) error {
+	return s.EmitWithSource(metrics, s.mySystemName)
+}
+
+func (s *Sink) ChunkAndEmitWithSource(metrics []*model.MetricItem, sourceName string) error {
+	// Chunk metric slice in size of 20 items
+	// Avoids UDP fragmentation => below 1460 bytes.
+	metricChunks := chunkSlice(metrics, 20)
+	var emitErr error
+	for i := range metricChunks {
+		err := s.EmitWithSource(metricChunks[i], sourceName)
+		if err != nil {
+			emitErr = err
+			s.logger.Error("Error occured the transmission of the metrics", "error", err)
+		}
+	}
+
+	return emitErr
+}
+
+// Transforms the payload to protobuf and sends to pifina server
+// Source can be modified by caller
+func (s *Sink) EmitWithSource(metrics []*model.MetricItem, sourceName string) error {
 	protobufMetrics := model.ConvertMetricsToProtobuf(metrics)
 	telemetryPayload := &pifina.PifinaTelemetryMessage{
-		SourceHost: s.mySystemName,
+		SourceHost: sourceName,
 		Metrics:    protobufMetrics,
 	}
 
@@ -89,7 +111,7 @@ func (s *Sink) Emit(metrics []*model.MetricItem) error {
 	if err != nil {
 		return err
 	}
-	s.logger.Debug("Metrics has been sent to pifina server", "server", s.pifinaEndpoint)
+	s.logger.Debug("Metrics have been sent to pifina server", "source", sourceName, "server", s.pifinaEndpoint)
 
 	return nil
 }

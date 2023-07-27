@@ -2,7 +2,9 @@ package neohost
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -38,7 +40,21 @@ func (d *NeoHostDriver) ListMlxNetworkCards() (*model.NeoHostDeviceList, error) 
 	if err != nil {
 		return nil, err
 	}
+
+	// Check if sdk exists
+	if _, err := os.Stat(d.sdkPath); errors.Is(err, os.ErrNotExist) {
+		d.logger.Error("NEO-Host SDK has not been found. Install NEO-Host SDK first or provide correct path to the SDK", "path", d.sdkPath, "err", err)
+		return nil, err
+	}
+
 	progPath := filepath.Join(d.sdkPath, "get_system_devices.py")
+
+	// Check if progPath exists
+	if _, err := os.Stat(progPath); errors.Is(err, os.ErrNotExist) {
+		d.logger.Error("get_system_devices.py has not been found in NEO-Host SDK. Maybe reinstall NEO-Host SDK", "path", progPath, "err", err)
+		return nil, err
+	}
+
 	var cmd *exec.Cmd
 	if d.neoPort == 0 {
 		cmd = exec.Command(pythonExecPath, progPath, d.neoMode, "--output=JSON")
@@ -57,13 +73,13 @@ func (d *NeoHostDriver) ListMlxNetworkCards() (*model.NeoHostDeviceList, error) 
 			} else {
 				jsonErr := json.Unmarshal(stdout, &commandResult)
 				if jsonErr != nil {
-					d.logger.Error("Error occured during retrieving Mellanox NICs information", "err", exitErr.Stderr, "command", cmd.Args)
-					return nil, jsonErr
+					d.logger.Error("Error occured during retrieving Mellanox NICs information", "err", string(stdout), "command", cmd.Args)
+					return nil, &model.ErrNotReady{Msg: "NEO SDK returned an error. See previous log message."}
 				}
 				d.logger.Error("NEO Host SDK returned an error during retrieving Mellanox NICs information.", "err", commandResult.Error.Message, "command", cmd.Args)
 			}
 		}
-		return nil, err
+		return nil, &model.ErrNotReady{Msg: "NEO SDK returned an error. See previous log message."}
 	}
 
 	err = json.Unmarshal(stdout, &commandResult)
@@ -76,7 +92,21 @@ func (d *NeoHostDriver) GetPerformanceCounters(devUid string) (*model.NeoHostPer
 	if err != nil {
 		return nil, err
 	}
+
+	// Check if sdk exists
+	if _, err := os.Stat(d.sdkPath); errors.Is(err, os.ErrNotExist) {
+		d.logger.Error("NEO-Host SDK has not been found. Install NEO-Host SDK first or provide correct path to the SDK", "path", d.sdkPath, "err", err)
+		return nil, err
+	}
+
 	progPath := filepath.Join(d.sdkPath, "get_device_performance_counters.py")
+
+	// Check if progPath exists
+	if _, err := os.Stat(progPath); errors.Is(err, os.ErrNotExist) {
+		d.logger.Error("get_device_performance_counters.py has not been found in NEO-Host SDK. Maybe reinstall NEO-Host SDK", "path", progPath, "err", err)
+		return nil, err
+	}
+
 	var cmd *exec.Cmd
 	if d.neoPort == 0 {
 		cmd = exec.Command(pythonExecPath, progPath, d.neoMode, fmt.Sprintf("--dev-uid=%s", devUid), "--output=JSON")
@@ -95,6 +125,7 @@ func (d *NeoHostDriver) GetPerformanceCounters(devUid string) (*model.NeoHostPer
 			} else {
 				d.logger.Error("NEO Host SDK returned an error during retrieving performance counters from NIC", "command", cmd.Args, "err", string(stdout))
 			}
+			return nil, &model.ErrNotReady{Msg: "NEO SDK returned an error. See previous log message."}
 		}
 		return nil, err
 	}
