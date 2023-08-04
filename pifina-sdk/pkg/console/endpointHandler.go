@@ -4,10 +4,13 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/thushjandan/pifina/pkg/controller/sink"
 	"github.com/thushjandan/pifina/pkg/endpoint"
+	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/urfave/cli/v2"
 )
 
@@ -96,19 +99,33 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
 
+	var wg sync.WaitGroup
+
+	metricSinkChan := make(chan *model.SinkEmitCommand)
+
+	// Init sink
+	sink := sink.NewSink(logger, cCtx.String("server"))
+	wg.Add(1)
+	go sink.StartSink(ctx, &wg, metricSinkChan)
+
 	collector := endpoint.NewEndpointCollector(&endpoint.EndpointCollectorOptions{
-		Logger:            logger,
-		SDKPath:           cCtx.String("sdk"),
-		NEOMode:           neoMode,
-		NEOPort:           neoPort,
-		TelemetryEndpoint: cCtx.String("server"),
+		Logger:         logger,
+		MetricSinkChan: metricSinkChan,
+		SampleInterval: cCtx.Int("sample-interval"),
+		SDKPath:        cCtx.String("sdk"),
+		NEOMode:        neoMode,
+		NEOPort:        neoPort,
 	})
 	targetDevices := cCtx.StringSlice("dev")
 	logger.Debug("Retrieving performance counters", "dev", targetDevices)
-	err := collector.GetMlxPerformanceCounters(ctx, targetDevices, cCtx.Int("sample-interval"))
+	err := collector.CollectMlxPerfCounters(ctx, &wg, targetDevices)
 	if err != nil {
 		logger.Error("Error occured retrieving all Connect-X NICs", "err", err)
 		return err
 	}
+
+	// Wait until all threads have terminated gracefully
+	wg.Wait()
+
 	return nil
 }

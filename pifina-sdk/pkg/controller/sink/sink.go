@@ -2,14 +2,15 @@ package sink
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/thushjandan/pifina/pkg/model/protos/pifina/pifina"
+	"google.golang.org/protobuf/proto"
 )
 
 type Sink struct {
@@ -32,17 +33,22 @@ func NewSink(logger hclog.Logger, pifinaEndpoint string) *Sink {
 	}
 }
 
-func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*model.MetricItem) error {
+func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan *model.SinkEmitCommand) error {
 	defer wg.Done()
 
 	for {
 		select {
-		case metrics := <-c:
+		case batch := <-c:
 			// Chunk metric slice in size of 20 items
 			// Avoids UDP fragmentation => below 1460 bytes.
-			metricChunks := chunkSlice(metrics, 20)
+			metricChunks := chunkSlice(batch.Metrics, 20)
 			for i := range metricChunks {
-				err := s.Emit(metricChunks[i])
+				var err error
+				if batch.SourceSuffix != "" {
+					err = s.emitWithSource(metricChunks[i], fmt.Sprintf("%s_%s", s.mySystemName, batch.SourceSuffix))
+				} else {
+					err = s.emit(metricChunks[i])
+				}
 				if err != nil {
 					s.logger.Error("Error occured the transmission of the metrics", "error", err)
 				}
@@ -52,33 +58,16 @@ func (s *Sink) StartSink(ctx context.Context, wg *sync.WaitGroup, c chan []*mode
 			return nil
 		}
 	}
-
 }
 
 // Transforms the payload to protobuf and sends to pifina server
-func (s *Sink) Emit(metrics []*model.MetricItem) error {
-	return s.EmitWithSource(metrics, s.mySystemName)
-}
-
-func (s *Sink) ChunkAndEmitWithSource(metrics []*model.MetricItem, sourceName string) error {
-	// Chunk metric slice in size of 20 items
-	// Avoids UDP fragmentation => below 1460 bytes.
-	metricChunks := chunkSlice(metrics, 20)
-	var emitErr error
-	for i := range metricChunks {
-		err := s.EmitWithSource(metricChunks[i], sourceName)
-		if err != nil {
-			emitErr = err
-			s.logger.Error("Error occured the transmission of the metrics", "error", err)
-		}
-	}
-
-	return emitErr
+func (s *Sink) emit(metrics []*model.MetricItem) error {
+	return s.emitWithSource(metrics, s.mySystemName)
 }
 
 // Transforms the payload to protobuf and sends to pifina server
 // Source can be modified by caller
-func (s *Sink) EmitWithSource(metrics []*model.MetricItem, sourceName string) error {
+func (s *Sink) emitWithSource(metrics []*model.MetricItem, sourceName string) error {
 	protobufMetrics := model.ConvertMetricsToProtobuf(metrics)
 	telemetryPayload := &pifina.PifinaTelemetryMessage{
 		SourceHost: sourceName,

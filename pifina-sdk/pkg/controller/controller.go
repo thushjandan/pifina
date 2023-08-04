@@ -79,7 +79,7 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	}
 
 	metricDataChannel := make(chan *model.MetricItem, 10)
-	metricsSinkChannel := make(chan []*model.MetricItem)
+	metricsSinkChannel := make(chan *model.SinkEmitCommand)
 	wg.Add(2)
 	go controller.sink.StartSink(ctx, wg, metricsSinkChannel)
 	// Start Bufferpool and Sampler

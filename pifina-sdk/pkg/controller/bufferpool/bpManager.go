@@ -30,7 +30,7 @@ func NewBufferpool(logger hclog.Logger, driver *driver.TofinoDriver, ts *traffic
 
 // Creates a buffer pool and listens on data channel for any metrics to add to buffer pool
 // This thread is the only one, which adds metrics to bufferpool
-func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitGroup, newMetricChannel chan *model.MetricItem, sinkMetricChannel chan []*model.MetricItem) {
+func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitGroup, newMetricChannel chan *model.MetricItem, sinkMetricChannel chan *model.SinkEmitCommand) {
 	defer wg.Done()
 	sessionIdWidth, err := bp.driver.GetSessionIdBitWidth()
 	notReady := false
@@ -69,7 +69,7 @@ func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitG
 			if !notReady {
 				allItems := bp.metricStorage.GetAllAndReset()
 				bp.logger.Trace("Sampled metrics", "metrics", allItems)
-				sinkMetricChannel <- allItems
+				sinkMetricChannel <- &model.SinkEmitCommand{Metrics: allItems}
 			}
 		case <-ctx.Done():
 			bp.logger.Info("Stopping bufferpool...")
