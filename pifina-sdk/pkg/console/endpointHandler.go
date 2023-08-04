@@ -117,11 +117,31 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 		NEOPort:        neoPort,
 	})
 	targetDevices := cCtx.StringSlice("dev")
-	logger.Debug("Retrieving performance counters", "dev", targetDevices)
-	err := collector.CollectMlxPerfCounters(ctx, &wg, targetDevices)
-	if err != nil {
-		logger.Error("Error occured retrieving all Connect-X NICs", "err", err)
-		return err
+
+	// Check if NEO Host SDK has been installed
+	if collector.IsNeoSDKExists() {
+		// Collect metrics from Neo SDK and ETHtool
+		logger.Debug("Retrieving performance counters", "dev", targetDevices)
+		err := collector.CollectMlxPerfCounters(ctx, &wg, targetDevices)
+		if err != nil {
+			logger.Error("Error occured retrieving all Connect-X NICs", "err", err)
+			return err
+		}
+
+	} else {
+		// Just collect from ethtool
+		for i := range targetDevices {
+			exists, err := collector.IsEthInterfaceExists(targetDevices[i])
+			if err != nil {
+				logger.Error("Cannot retrieve interfaces from system", "err", err)
+			}
+			if !exists {
+				logger.Error("Interface does not exists!", "dev", targetDevices[i])
+				return nil
+			}
+		}
+
+		collector.CollectEthCounter(ctx, &wg, targetDevices)
 	}
 
 	// Wait until all threads have terminated gracefully

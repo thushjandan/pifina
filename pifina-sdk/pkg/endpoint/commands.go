@@ -57,6 +57,10 @@ func NewEndpointCollector(options *EndpointCollectorOptions) *EndpointCollector 
 	}
 }
 
+func (c *EndpointCollector) IsNeoSDKExists() bool {
+	return c.IsNeoSDKExists()
+}
+
 // List all available Mellanox network interface cards
 func (c *EndpointCollector) ListMlxNetworkCards() error {
 	result, err := c.neohost.ListMlxNetworkCards()
@@ -91,20 +95,30 @@ func (c *EndpointCollector) CollectMlxPerfCounters(ctx context.Context, wg *sync
 
 	// Create a cache userdefined name <-> dev-uid
 	devUids := make(map[string]string)
+	ethNames := make([]string, 0)
 
 	for _, targetDevice := range targetDevices {
 		uid, ok := c.findDevUid(result, targetDevice)
 		if !ok {
-			c.logger.Error("NIC with the given dev-uid has not been found.", "dev-uid", targetDevice)
+			c.logger.Error("NIC with the given name has not been found.", "name", targetDevice)
 			return &model.ErrNameNotFound{Entity: targetDevice, Msg: "Device not found"}
 		}
 		devUids[targetDevice] = uid
+		ethName, ok := c.findEthNameFromMlxDev(result, targetDevice)
+		if !ok {
+			c.logger.Error("NIC with the given name has not been found.", "name", targetDevice)
+			return &model.ErrNameNotFound{Entity: targetDevice, Msg: "Device not found"}
+		}
+		ethNames = append(ethNames, ethName)
 	}
 
 	for device, uid := range devUids {
 		go c.GetMlxPerformanceCounters(ctx, wg, device, uid)
 		wg.Add(1)
 	}
+
+	// Start Ethtool counter
+	c.CollectEthCounter(ctx, wg, ethNames)
 
 	return nil
 }
@@ -190,6 +204,20 @@ func (c *EndpointCollector) findDevUid(devices *model.NeoHostDeviceList, targetD
 			if len(port.PhysicalFunctions) > 0 && len(port.PhysicalFunctions[0].NetworkInterfaces) > 0 {
 				if port.PhysicalFunctions[0].NetworkInterfaces[0] == targetDevice {
 					return port.UID, true
+				}
+			}
+		}
+	}
+
+	return "", false
+}
+
+func (c *EndpointCollector) findEthNameFromMlxDev(devices *model.NeoHostDeviceList, targetDevice string) (string, bool) {
+	for i := range devices.Results {
+		for _, port := range devices.Results[i].Ports {
+			if len(port.PhysicalFunctions) > 0 && len(port.PhysicalFunctions[0].NetworkInterfaces) > 0 {
+				if port.PhysicalFunctions[0].NetworkInterfaces[0] == targetDevice || port.UID == targetDevice || port.IbDevice == targetDevice {
+					return port.PhysicalFunctions[0].NetworkInterfaces[0], true
 				}
 			}
 		}

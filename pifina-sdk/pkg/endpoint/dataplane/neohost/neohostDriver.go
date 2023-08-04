@@ -35,16 +35,24 @@ func NewNeoHostDriver(options *NeoHostDriverOptions) *NeoHostDriver {
 	}
 }
 
+func (d *NeoHostDriver) IsNeoSDKExists() bool {
+	// Check if sdk exists
+	if _, err := os.Stat(d.sdkPath); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	return true
+}
+
 func (d *NeoHostDriver) ListMlxNetworkCards() (*model.NeoHostDeviceList, error) {
 	pythonExecPath, err := exec.LookPath("python3")
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if sdk exists
-	if _, err := os.Stat(d.sdkPath); errors.Is(err, os.ErrNotExist) {
+	if !d.IsNeoSDKExists() {
 		d.logger.Error("NEO-Host SDK has not been found. Install NEO-Host SDK first or provide correct path to the SDK", "path", d.sdkPath, "err", err)
-		return nil, err
+		return nil, &model.ErrNotReady{Msg: "NEO SDK not found"}
 	}
 
 	progPath := filepath.Join(d.sdkPath, "get_system_devices.py")
@@ -94,9 +102,9 @@ func (d *NeoHostDriver) GetPerformanceCounters(devUid string) (*model.NeoHostPer
 	}
 
 	// Check if sdk exists
-	if _, err := os.Stat(d.sdkPath); errors.Is(err, os.ErrNotExist) {
+	if !d.IsNeoSDKExists() {
 		d.logger.Error("NEO-Host SDK has not been found. Install NEO-Host SDK first or provide correct path to the SDK", "path", d.sdkPath, "err", err)
-		return nil, err
+		return nil, &model.ErrNotReady{Msg: "NEO SDK not found"}
 	}
 
 	progPath := filepath.Join(d.sdkPath, "get_device_performance_counters.py")
