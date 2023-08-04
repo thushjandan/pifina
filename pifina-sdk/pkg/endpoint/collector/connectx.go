@@ -1,4 +1,4 @@
-package endpoint
+package collector
 
 import (
 	"context"
@@ -9,56 +9,11 @@ import (
 
 	"github.com/cheynewallace/tabby"
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/controller/sink"
-	"github.com/thushjandan/pifina/pkg/endpoint/dataplane/neohost"
 	"github.com/thushjandan/pifina/pkg/model"
 )
 
-type EndpointCollector struct {
-	logger                  hclog.Logger
-	sampleInterval          int
-	metricSinkChan          chan *model.SinkEmitCommand
-	neohost                 *neohost.NeoHostDriver
-	neoHostCounterNameCache map[string]empty
-	sink                    *sink.Sink
-}
-
-type EndpointCollectorOptions struct {
-	Logger            hclog.Logger
-	SampleInterval    int
-	MetricSinkChan    chan *model.SinkEmitCommand
-	SDKPath           string
-	NEOMode           string
-	NEOPort           int
-	TelemetryEndpoint string
-}
-
-type empty struct{}
-
-func NewEndpointCollector(options *EndpointCollectorOptions) *EndpointCollector {
-	neohost := neohost.NewNeoHostDriver(&neohost.NeoHostDriverOptions{
-		Logger:  options.Logger.Named("neohost"),
-		SDKPath: options.SDKPath,
-		NEOMode: options.NEOMode,
-		NEOPort: options.NEOPort,
-	})
-
-	// Create a cache of interested counter names for fast lookup
-	counterNameCache := make(map[string]empty)
-	for _, counterName := range model.NEOHOST_COUNTERS {
-		counterNameCache[counterName] = empty{}
-	}
-	return &EndpointCollector{
-		logger:                  options.Logger.Named("endpoint-collector"),
-		sampleInterval:          options.SampleInterval,
-		neohost:                 neohost,
-		neoHostCounterNameCache: counterNameCache,
-		metricSinkChan:          options.MetricSinkChan,
-	}
-}
-
 func (c *EndpointCollector) IsNeoSDKExists() bool {
-	return c.IsNeoSDKExists()
+	return c.neohost.IsNeoSDKExists()
 }
 
 // List all available Mellanox network interface cards
@@ -86,6 +41,8 @@ func (c *EndpointCollector) ListMlxNetworkCards() error {
 	return nil
 }
 
+// Starts collection of performance counter from ConnectX card.
+// In addition it starts collection of ethtool stats too.
 func (c *EndpointCollector) CollectMlxPerfCounters(ctx context.Context, wg *sync.WaitGroup, targetDevices []string) error {
 	// Retrieve information about Mellanox interfaces
 	result, err := c.neohost.ListMlxNetworkCards()

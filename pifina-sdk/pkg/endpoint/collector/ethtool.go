@@ -1,8 +1,7 @@
-package endpoint
+package collector
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -25,6 +24,7 @@ func (c *EndpointCollector) CollectEthCounter(ctx context.Context, wg *sync.Wait
 	return nil
 }
 
+// Get stats from ethtool
 func (c *EndpointCollector) GetEthtoolStats(ctx context.Context, wg *sync.WaitGroup, ethtoolHandle *ethtool.Ethtool, deviceName string) {
 	defer wg.Done()
 
@@ -39,7 +39,8 @@ func (c *EndpointCollector) GetEthtoolStats(ctx context.Context, wg *sync.WaitGr
 				c.logger.Warn("Cannot retrieve ethtool stats from NIC", "dev", deviceName, "err", err)
 				continue
 			}
-			c.transformEthtoolMetrics(stats)
+			metrics := c.transformEthtoolMetrics(stats)
+			c.metricSinkChan <- &model.SinkEmitCommand{SourceSuffix: deviceName, Metrics: metrics}
 		case <-ctx.Done():
 			c.logger.Info("Stopping ethtool collector", "dev", deviceName)
 			return
@@ -47,13 +48,25 @@ func (c *EndpointCollector) GetEthtoolStats(ctx context.Context, wg *sync.WaitGr
 	}
 }
 
+// Transform ethtool stats to MetricItem objects
 func (c *EndpointCollector) transformEthtoolMetrics(ethtoolStats map[string]uint64) []*model.MetricItem {
-	for statName, statValue := range ethtoolStats {
-		fmt.Printf("%s => %d", statName, statValue)
+	timeNow := time.Now()
+	metrics := make([]*model.MetricItem, 0)
+	for i := range model.ETHTOOL_COUNTERS {
+		if statVal, ok := ethtoolStats[model.ETHTOOL_COUNTERS[i]]; ok {
+			metrics = append(metrics, &model.MetricItem{
+				MetricName:  model.ETHTOOL_COUNTERS[i],
+				Value:       statVal,
+				LastUpdated: timeNow,
+				Type:        model.METRIC_EXT_VALUE,
+				SessionId:   0,
+			})
+		}
 	}
-	return nil
+	return metrics
 }
 
+// Check if given name exists as ethernet interface
 func (c *EndpointCollector) IsEthInterfaceExists(deviceName string) (bool, error) {
 	allInterfaces, err := net.Interfaces()
 	if err != nil {

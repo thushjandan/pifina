@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/thushjandan/pifina/pkg/controller/sink"
-	"github.com/thushjandan/pifina/pkg/endpoint"
+	"github.com/thushjandan/pifina/pkg/endpoint/collector"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/urfave/cli/v2"
 )
@@ -46,7 +46,7 @@ func ListMlxDevicesCliAction(cCtx *cli.Context) error {
 	}
 
 	logger.Debug("Retrieving system devices")
-	collector := endpoint.NewEndpointCollector(&endpoint.EndpointCollectorOptions{
+	collector := collector.NewEndpointCollector(&collector.EndpointCollectorOptions{
 		Logger:  logger,
 		SDKPath: cCtx.String("sdk"),
 		NEOMode: neoMode,
@@ -106,9 +106,11 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 	// Init sink
 	sink := sink.NewSink(logger, cCtx.String("server"))
 	wg.Add(1)
+
+	logger.Info("Starting sink...")
 	go sink.StartSink(ctx, &wg, metricSinkChan)
 
-	collector := endpoint.NewEndpointCollector(&endpoint.EndpointCollectorOptions{
+	collector := collector.NewEndpointCollector(&collector.EndpointCollectorOptions{
 		Logger:         logger,
 		MetricSinkChan: metricSinkChan,
 		SampleInterval: cCtx.Int("sample-interval"),
@@ -129,8 +131,10 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 		}
 
 	} else {
+		// Neohost does not exists
 		// Just collect from ethtool
 		for i := range targetDevices {
+			// Check if given device name exists
 			exists, err := collector.IsEthInterfaceExists(targetDevices[i])
 			if err != nil {
 				logger.Error("Cannot retrieve interfaces from system", "err", err)
@@ -140,7 +144,7 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 				return nil
 			}
 		}
-
+		// start collector from ethtool
 		collector.CollectEthCounter(ctx, &wg, targetDevices)
 	}
 
