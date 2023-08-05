@@ -11,7 +11,7 @@ var member void
 
 type PifinaEndpoint struct {
 	Name     string `json:"name"`
-	HostType string `json:"hostType"`
+	HostType string `json:"type"`
 	Address  net.IP `json:"address"`
 	Port     int    `json:"port"`
 	GroupId  uint32 `json:"groupId"`

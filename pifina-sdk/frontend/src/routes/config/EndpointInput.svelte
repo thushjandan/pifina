@@ -1,8 +1,16 @@
 <script lang="ts">
-	import type { EndpointModel } from "$lib/models/EndpointModel";
+	import { EndpointType, type EndpointModel } from "$lib/models/EndpointModel";
 	import { endpointAddress } from "./EndpointStore";
 
-    let endpointPromise = fetch('/api/v1/endpoints').then(response => response.json());
+    const fetchEndpoints = () => {
+        return fetch('/api/v1/endpoints').then(
+            response => response.json().then(
+                endpoints => new Promise<EndpointModel[]>(resolve => resolve(endpoints.filter((item: EndpointModel) => item.type == EndpointType.HOSTTYPE_TOFINO)))
+            )
+        )
+    }
+
+    let endpointPromise = fetchEndpoints();
     let editEndpointEntity: EndpointModel;
     let editModeEnabled: boolean = false;
     let loading: boolean = false;
@@ -15,6 +23,8 @@
     function editEndpoint(endpoint: EndpointModel) {
         editEndpointEntity = {
             name: endpoint.name,
+            type: endpoint.type,
+            groupId: endpoint.groupId,
             address: endpoint.address,
             port: endpoint.port
         }
@@ -34,7 +44,7 @@
         }).then(data => {
             loading = false;
             if (data.ok) {
-                endpointPromise = fetch('/api/v1/endpoints').then(response => response.json());
+                endpointPromise = fetchEndpoints();
             } else {
                 data.json().then(data => editErrorMsg = data.message);
             }

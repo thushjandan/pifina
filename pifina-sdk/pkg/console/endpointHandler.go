@@ -123,7 +123,7 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 	targetDevices := cCtx.StringSlice("dev")
 
 	// Check if NEO Host SDK has been installed
-	if collector.IsNeoSDKExists() {
+	if collector.IsNeoSDKExists() && !cCtx.Bool("disable-neohost") {
 		// Collect metrics from Neo SDK and ETHtool
 		logger.Debug("Retrieving performance counters", "dev", targetDevices)
 		err := collector.CollectMlxPerfCounters(ctx, &wg, targetDevices)
