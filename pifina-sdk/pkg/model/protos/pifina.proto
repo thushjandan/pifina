@@ -4,10 +4,17 @@ package pifina;
 
 import "google/protobuf/timestamp.proto";
 
+enum PifinaHostTypes {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_TOFINO = 1;
+    TYPE_NIC = 2;
+  }
+
 message PifinaTelemetryMessage {
     string sourceHost = 1;
-    uint32 groupId = 2;
-    repeated PifinaMetric metrics = 3;
+    PifinaHostTypes hostType = 2;
+    uint32 groupId = 3;
+    repeated PifinaMetric metrics = 4;
 }
 
 message PifinaMetric {

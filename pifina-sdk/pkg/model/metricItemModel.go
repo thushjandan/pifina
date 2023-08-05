@@ -12,6 +12,8 @@ type MetricItem struct {
 
 type TelemetryMessage struct {
 	Source     string
+	HostType   string
+	GroupId    uint32
 	MetricList []*MetricItem
 }
 
@@ -19,4 +21,6 @@ const (
 	METRIC_BYTES     = "METRIC_BYTES"
 	METRIC_PKTS      = "METRIC_PKTS"
 	METRIC_EXT_VALUE = "METRIC_EXT_VALUE"
+	HOSTTYPE_TOFINO  = "HOSTTYPE_TOFINO"
+	HOSTTYPE_NIC     = "HOSTTYPE_NIC"
 )

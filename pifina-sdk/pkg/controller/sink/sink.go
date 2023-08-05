@@ -16,20 +16,37 @@ import (
 type Sink struct {
 	logger         hclog.Logger
 	pifinaEndpoint string
+	hostType       pifina.PifinaHostTypes
 	mySystemName   string
 	groupId        uint32
 }
 
-func NewSink(logger hclog.Logger, pifinaEndpoint string, groupId uint32) *Sink {
+// hostType needs to be one of the constants defined in metricItemModel file
+// possible values: model.HOSTTYPE_TOFINO or model.HOSTTYPE_NIC
+// group id used to group multiple probes in the frontend
+func NewSink(logger hclog.Logger, hostType string, pifinaEndpoint string, groupId uint32) *Sink {
 	logger = logger.Named("sink")
 	hostname, err := os.Hostname()
 	if err != nil {
 		logger.Error("Cannot retrieve system hostname. setting system name to unknown")
 		hostname = "unknown"
 	}
+
+	// Check host type parameter
+	var pfHostType pifina.PifinaHostTypes
+	switch hostType {
+	case model.HOSTTYPE_TOFINO:
+		pfHostType = pifina.PifinaHostTypes_TYPE_TOFINO
+	case model.HOSTTYPE_NIC:
+		pfHostType = pifina.PifinaHostTypes_TYPE_NIC
+	default:
+		pfHostType = pifina.PifinaHostTypes_TYPE_UNSPECIFIED
+	}
+
 	return &Sink{
 		logger:         logger,
 		pifinaEndpoint: pifinaEndpoint,
+		hostType:       pfHostType,
 		mySystemName:   hostname,
 		groupId:        groupId,
 	}
@@ -73,6 +90,7 @@ func (s *Sink) emitWithSource(metrics []*model.MetricItem, sourceName string) er
 	protobufMetrics := model.ConvertMetricsToProtobuf(metrics)
 	telemetryPayload := &pifina.PifinaTelemetryMessage{
 		SourceHost: sourceName,
+		HostType:   s.hostType,
 		GroupId:    s.groupId,
 		Metrics:    protobufMetrics,
 	}

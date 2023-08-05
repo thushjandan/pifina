@@ -60,12 +60,26 @@ func (r *MetricReceiver) StartServer(ctx context.Context, port string, telemetry
 			}
 			r.logger.Trace("Successfully decoded protobuf telemetry message", "host", protoTelemetryMsg.SourceHost)
 			metricList := model.ConvertProtobufToMetrics(protoTelemetryMsg.Metrics)
+			// Check host type
+			var hostType string
+			switch protoTelemetryMsg.HostType {
+			case pifina.PifinaHostTypes_TYPE_TOFINO:
+				hostType = model.HOSTTYPE_TOFINO
+			case pifina.PifinaHostTypes_TYPE_NIC:
+				hostType = model.HOSTTYPE_NIC
+			default:
+				// Skip this metric as it is unknown
+				continue
+			}
+
 			telemetryMessage := &model.TelemetryMessage{
 				Source:     protoTelemetryMsg.SourceHost,
+				HostType:   hostType,
+				GroupId:    protoTelemetryMsg.GroupId,
 				MetricList: metricList,
 			}
 			if len(metricList) > 0 {
-				r.ed.Set(protoTelemetryMsg.SourceHost, clientAddr.IP)
+				r.ed.Set(protoTelemetryMsg.SourceHost, hostType, protoTelemetryMsg.GroupId, clientAddr.IP)
 				telemetryChannel <- telemetryMessage
 			}
 		}

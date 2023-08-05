@@ -106,7 +106,7 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 	metricSinkChan := make(chan *model.SinkEmitCommand)
 
 	// Init sink
-	sink := sink.NewSink(logger, cCtx.String("server"), uint32(cCtx.Uint("group-id")))
+	sink := sink.NewSink(logger, model.HOSTTYPE_NIC, cCtx.String("server"), uint32(cCtx.Uint("group-id")))
 	wg.Add(1)
 
 	logger.Info("Starting sink...")

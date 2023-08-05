@@ -10,9 +10,11 @@ type void struct{}
 var member void
 
 type PifinaEndpoint struct {
-	Name    string `json:"name"`
-	Address net.IP `json:"address"`
-	Port    int    `json:"port"`
+	Name     string `json:"name"`
+	HostType string `json:"hostType"`
+	Address  net.IP `json:"address"`
+	Port     int    `json:"port"`
+	GroupId  uint32 `json:"groupId"`
 }
 
 type PifinaEndpointDirectory struct {
@@ -28,10 +30,16 @@ func NewPifinaEndpointDirectory(port int) *PifinaEndpointDirectory {
 	}
 }
 
-func (e *PifinaEndpointDirectory) Set(newEndpoint string, address net.IP) {
+func (e *PifinaEndpointDirectory) Set(newEndpoint string, hostType string, groupId uint32, address net.IP) {
 	if _, ok := e.endpoints[newEndpoint]; !ok {
 		e.lock.Lock()
-		e.endpoints[newEndpoint] = &PifinaEndpoint{Name: newEndpoint, Address: address, Port: e.defaultControllerApiPort}
+		e.endpoints[newEndpoint] = &PifinaEndpoint{
+			Name:     newEndpoint,
+			HostType: hostType,
+			GroupId:  groupId,
+			Address:  address,
+			Port:     e.defaultControllerApiPort,
+		}
 		e.lock.Unlock()
 	}
 }
