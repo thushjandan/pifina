@@ -66,6 +66,8 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 		Level: hclog.LevelFromString(cCtx.String("level")),
 		Color: hclog.AutoColor,
 	})
+
+	// Check if user is root
 	if os.Getuid() != 0 {
 		logger.Error("Need to be root. Please use sudo or run as root.")
 		os.Exit(1)
@@ -104,7 +106,7 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 	metricSinkChan := make(chan *model.SinkEmitCommand)
 
 	// Init sink
-	sink := sink.NewSink(logger, cCtx.String("server"))
+	sink := sink.NewSink(logger, cCtx.String("server"), uint32(cCtx.Uint("group-id")))
 	wg.Add(1)
 
 	logger.Info("Starting sink...")

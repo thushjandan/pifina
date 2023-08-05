@@ -31,6 +31,7 @@ type TofinoController struct {
 type TofinoControllerOptions struct {
 	Logger                  hclog.Logger
 	Endpoint                string
+	GroupId                 uint
 	ConnectTimeout          int
 	P4name                  string
 	CollectorServerEndpoint string
@@ -49,7 +50,7 @@ func NewTofinoController(options *TofinoControllerOptions) *TofinoController {
 	collector := collector.NewMetricCollector(options.Logger, driver, options.SampleInterval, ts, options.PipelineCount)
 	bp := bufferpool.NewBufferpool(options.Logger, driver, ts)
 	apiServer := api.NewControllerApiServer(options.Logger, options.APIPort, ts, bp)
-	sink := sink.NewSink(options.Logger, options.CollectorServerEndpoint)
+	sink := sink.NewSink(options.Logger, options.CollectorServerEndpoint, uint32(options.GroupId))
 	return &TofinoController{
 		logger:         options.Logger.Named("controller"),
 		driver:         driver,

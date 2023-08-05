@@ -6,7 +6,8 @@ import "google/protobuf/timestamp.proto";
 
 message PifinaTelemetryMessage {
     string sourceHost = 1;
-    repeated PifinaMetric metrics = 2;
+    uint32 groupId = 2;
+    repeated PifinaMetric metrics = 3;
 }
 
 message PifinaMetric {

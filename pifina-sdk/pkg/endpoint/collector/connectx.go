@@ -87,7 +87,7 @@ func (c *EndpointCollector) GetMlxPerformanceCounters(ctx context.Context, wg *s
 	ticker := time.NewTicker(time.Duration(c.sampleInterval) * time.Second)
 	defer ticker.Stop()
 
-	c.logger.Info("Starting to collect performance counters from NEO-SDK...", "dev", targetDevice)
+	c.logger.Info("Collecting performance counters from NEO-SDK in background", "dev", targetDevice)
 
 	for {
 		select {
@@ -103,16 +103,16 @@ func (c *EndpointCollector) GetMlxPerformanceCounters(ctx context.Context, wg *s
 			metrics := c.transformNeoHostMetrics(perfCounters)
 			if c.logger.GetLevel() == hclog.Debug {
 				if jsonMetrics, err := json.Marshal(metrics); err != nil {
-					c.logger.Debug("Transformed performance counters from NEO Host", "metrics", jsonMetrics)
+					c.logger.Debug("Transformed performance counters from NEO Host", "dev", targetDevice, "metrics", jsonMetrics)
 				} else {
-					c.logger.Debug("Transformed performance counters from NEO Host", "metrics", metrics)
+					c.logger.Debug("Transformed performance counters from NEO Host", "dev", targetDevice, "metrics", metrics)
 				}
 			}
 			// Send metrics
 			c.metricSinkChan <- &model.SinkEmitCommand{SourceSuffix: targetDevice, Metrics: metrics}
-			c.logger.Debug("Time duration of the collection", "duration", time.Since(timeNow))
+			c.logger.Debug("Time duration of the collection", "dev", targetDevice, "duration", time.Since(timeNow))
 		case <-ctx.Done():
-			c.logger.Info("Stopping collector...", "dev", targetDevice)
+			c.logger.Info("Stopping neohost collector...", "dev", targetDevice)
 			return nil
 		}
 	}

@@ -26,13 +26,14 @@ func main() {
 	bfrt_endpoint := flag.String("bfrt", "127.0.0.1:50052", "BF runtime GRPC server address (Dataplane endpoint)")
 	p4_name := flag.String("p4name", "", "Name of the P4 application. e.g. myapp")
 	collector_server := flag.String("server", "127.0.0.1:8654", "PIFINA collector address")
+	group_id := flag.Uint("group-id", 1, "Group Identifier for PIFINA collector server. Used to group multiple probes together.")
 	debug_server := flag.String("debug-server", "127.0.0.1:6060", "Golang debug http pprof listen address")
 	api_port := flag.String("port", ":8656", "Controller API port to listen")
 	version_flag := flag.Bool("version", false, "show version")
-	connect_timeout := flag.Int("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
-	sample_interval := flag.Int("sample-interval-ms", 50, "Sample interval in ms. Default 100ms")
-	lpf_time_constant_int := flag.Int("lpf-time-ns", 80, "LPF time constant for computing moving average of the ingress jitter value.")
-	pipeline_count := flag.Int("pipe-count", 4, "Amount of pipeline existing on the tofino. Used to retrieve TrafficManager metrics per pipeline.")
+	connect_timeout := flag.Uint("connect-timeout", 5, "Connect timeout for the GRPC connection to the switch.")
+	sample_interval := flag.Uint("sample-interval-ms", 50, "Sample interval in ms. Default 100ms")
+	lpf_time_constant_int := flag.Uint("lpf-time-ns", 80, "LPF time constant for computing moving average of the ingress jitter value.")
+	pipeline_count := flag.Uint("pipe-count", 4, "Amount of pipeline existing on the tofino. Used to retrieve TrafficManager metrics per pipeline.")
 
 	flag.Parse()
 
@@ -74,14 +75,16 @@ func main() {
 	options := &controller.TofinoControllerOptions{
 		Logger:                  logger,
 		Endpoint:                *bfrt_endpoint,
-		ConnectTimeout:          *connect_timeout,
+		ConnectTimeout:          int(*connect_timeout),
+		GroupId:                 *group_id,
 		P4name:                  *p4_name,
 		CollectorServerEndpoint: *collector_server,
-		SampleInterval:          *sample_interval,
+		SampleInterval:          int(*sample_interval),
 		APIPort:                 *api_port,
 		LpfTimeConst:            float32(*lpf_time_constant_int),
-		PipelineCount:           *pipeline_count,
+		PipelineCount:           int(*pipeline_count),
 	}
+
 	controller := controller.NewTofinoController(options)
 	err = controller.StartController(ctx, &wg)
 	if err != nil {

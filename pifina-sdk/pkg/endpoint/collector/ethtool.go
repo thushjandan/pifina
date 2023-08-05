@@ -31,6 +31,8 @@ func (c *EndpointCollector) GetEthtoolStats(ctx context.Context, wg *sync.WaitGr
 	ticker := time.NewTicker(time.Duration(c.sampleInterval) * time.Second)
 	defer ticker.Stop()
 
+	c.logger.Info("Collecting stats from ethtool background", "dev", deviceName)
+
 	for {
 		select {
 		case <-ticker.C:

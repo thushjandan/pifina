@@ -17,9 +17,10 @@ type Sink struct {
 	logger         hclog.Logger
 	pifinaEndpoint string
 	mySystemName   string
+	groupId        uint32
 }
 
-func NewSink(logger hclog.Logger, pifinaEndpoint string) *Sink {
+func NewSink(logger hclog.Logger, pifinaEndpoint string, groupId uint32) *Sink {
 	logger = logger.Named("sink")
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -30,6 +31,7 @@ func NewSink(logger hclog.Logger, pifinaEndpoint string) *Sink {
 		logger:         logger,
 		pifinaEndpoint: pifinaEndpoint,
 		mySystemName:   hostname,
+		groupId:        groupId,
 	}
 }
 
@@ -71,6 +73,7 @@ func (s *Sink) emitWithSource(metrics []*model.MetricItem, sourceName string) er
 	protobufMetrics := model.ConvertMetricsToProtobuf(metrics)
 	telemetryPayload := &pifina.PifinaTelemetryMessage{
 		SourceHost: sourceName,
+		GroupId:    s.groupId,
 		Metrics:    protobufMetrics,
 	}
 
