@@ -4,8 +4,8 @@
 	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
 	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 	import TofinoDashboardType from '$lib/dashboardType/TofinoDashboardType.svelte';
-	import { MetricTypes } from '$lib/models/metricTypes';
 	import NicDashboardType from '$lib/dashboardType/NICDashboardType.svelte';
+	import { groupIdFilterStore } from '$lib/stores/groupIdFilterStore';
 
     export let endpoints: EndpointModel[];
 
@@ -24,6 +24,7 @@
 	let isEnabled: boolean = true;
 
 	endpointFilterStore.set(endpoints[0]?.name || "");
+	groupIdFilterStore.set(endpoints[0]?.groupId || 1);
 	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
 	worker.port.postMessage({status: "CONNECT", groupId: selectedGroupid});
@@ -89,6 +90,7 @@
 
 
 	const onHostGroupChange = () => {
+		groupIdFilterStore.set(selectedGroupid);
 		worker.port.postMessage({status: "CONNECT", groupId: selectedGroupid});
 	}
 

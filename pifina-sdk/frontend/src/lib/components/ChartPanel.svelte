@@ -4,6 +4,7 @@
     import type { MetricItem } from '../models/MetricItem';
 	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
+	import { groupIdFilterStore } from '$lib/stores/groupIdFilterStore';
 
     export let chartTitle: string;
     export let screenWidth: number;
@@ -23,12 +24,14 @@
 
     let selectedSessionIds: number[] = [];
     let selectedEndpoint: string = "";
+    let selectedGroupId: number = 1;
 
     sessionFilterStore.subscribe(val => selectedSessionIds = val);
     endpointFilterStore.subscribe(val => selectedEndpoint = val);
+    groupIdFilterStore.subscribe(val => selectedGroupId = val);
 
     const openDetailView = () => {
-		window.open(`/dashboard/detail?endpoint=${selectedEndpoint}&selectedMetric=${metricAttributeName}`, "_blank");
+		window.open(`/dashboard/detail?groupId=${selectedGroupId}&endpoint=${selectedEndpoint}&selectedMetric=${metricAttributeName}`, "_blank");
 	}
 </script>
 

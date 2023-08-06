@@ -2,10 +2,11 @@
     import * as Plot from "@observablehq/plot";
 	import Chart from "../../../lib/components/Chart.svelte";
 	import { page } from '$app/stores';
-	import type { DTOPifinaMetricItem, MetricItem } from "$lib/models/MetricItem";
+	import type { MetricItem } from "$lib/models/MetricItem";
 	import { PIFINA_PROBE_CHART_CFG, Y_AXIS_NAME_BYTE_RATE } from "$lib/models/metricNames";
-	import { PifinaMetricName } from "$lib/models/metricTypes";
+	import { EndpointType, type DTOTelemetryMessage } from "$lib/models/EndpointModel";
 
+	let selectedGroupId = $page.url.searchParams.get('groupId') || 1;
 	let selectedMetric = $page.url.searchParams.get('selectedMetric') || "";
 	let selectedEndpoint = $page.url.searchParams.get('endpoint') || "";
 	let metricData: MetricItem[] = [];
@@ -15,31 +16,34 @@
 
 	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
-	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+	worker.port.postMessage({status: "CONNECT", groupId: selectedGroupId});
 	worker.port.onmessage = (event) => {
-		let dataobj: DTOPifinaMetricItem[] = event.data;
+		let telemetryMessage: DTOTelemetryMessage = event.data;
 
-		dataobj.forEach(item => {
-			let key = `${item.metricName}${item.type}`;
-			// Check if it's a metric from a default probe
-			if (!item.metricName.startsWith("PF_")) {
-				key = item.metricName;
+		// Skip any message not related
+		if (telemetryMessage.source !== selectedEndpoint) {
+			return
+		}
+
+		telemetryMessage.metrics.forEach(item => {
+			let key = item.metricName;
+			if (telemetryMessage.type === EndpointType.HOSTTYPE_TOFINO) {
+				key = `${item.metricName}${item.type}`;
+				// Check if it's a metric from a default probe
+				if (!item.metricName.startsWith("PF_")) {
+					key = item.metricName;
+				}
+				if (item.metricName.startsWith("PF_TM_")) {
+					key = item.metricName;
+				}
+				if (item.metricName.startsWith("PF_EXTRA")) {
+					key = item.metricName;
+				}
 			}
-			if (item.metricName.startsWith("PF_TM_")) {
-				key = item.metricName;
-			}
-			if (item.metricName.startsWith("PF_EXTRA")) {
-				key = item.metricName;
-			}
+			
 			if (selectedMetric === key) {
 				if (!sessionIds.has(item.sessionId) && !item.metricName.startsWith("PF_TM_")) {
 					sessionIds.add(item.sessionId);
-				}
-				// Convert nano seconds to miliseconds
-				if (item.metricName == PifinaMetricName.INGRESS_JITTER_AVG) {
-					if (item.value > 0) {
-						item.value = item.value / 1000;
-					}
 				}
 				metricData.push({timestamp: new Date(item.timestamp), value: item.value, sessionId: item.sessionId, type: item.type});
 			}
