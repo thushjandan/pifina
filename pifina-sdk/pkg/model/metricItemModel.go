@@ -11,10 +11,10 @@ type MetricItem struct {
 }
 
 type TelemetryMessage struct {
-	Source     string
-	HostType   string
-	GroupId    uint32
-	MetricList []*MetricItem
+	Source     string        `json:"source"`
+	HostType   string        `json:"type"`
+	GroupId    uint32        `json:"groupId"`
+	MetricList []*MetricItem `json:"metrics"`
 }
 
 const (

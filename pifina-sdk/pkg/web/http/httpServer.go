@@ -108,16 +108,16 @@ func (s *PifinaHttpServer) ListenAndPublishMetrics(ctx context.Context, telemetr
 	for {
 		select {
 		case telemetryItem := <-telemetryChannel:
-			groupId := fmt.Sprint(telemetryItem.GroupId)
-			if !s.sse.StreamExists(groupId) {
-				s.sse.CreateStream(groupId)
+			streamName := fmt.Sprintf("group%d", telemetryItem.GroupId)
+			if !s.sse.StreamExists(streamName) {
+				s.sse.CreateStream(streamName)
 			}
-			jsonPayload, err := json.Marshal(telemetryItem.MetricList)
+			jsonPayload, err := json.Marshal(telemetryItem)
 			if err != nil {
 				continue
 			}
 
-			s.sse.TryPublish(telemetryItem.Source, &sse.Event{
+			s.sse.TryPublish(streamName, &sse.Event{
 				Data: jsonPayload,
 			})
 		case <-ctx.Done():
