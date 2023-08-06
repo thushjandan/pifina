@@ -1,4 +1,5 @@
-import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_TM_CHART_ORDER } from "./metricNames";
+import type { PIFINA_DASHBOARD_CONF_TYPE } from "$lib/models/dashboardConfigModel";
+import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_ETHTOOL_CHART_ORDER, PIFINA_NEO_CHART_ORDER, PIFINA_TM_CHART_ORDER } from "./chartOrderConfig";
 
 export const PIFINA_DASHBOARD_CONF: PIFINA_DASHBOARD_CONF_TYPE = {
     HOSTTYPE_TOFINO: [
@@ -31,19 +32,20 @@ export const PIFINA_DASHBOARD_CONF: PIFINA_DASHBOARD_CONF_TYPE = {
             disableSessionFilter: true
         }        
     ],
-    HOSTTYPE_NIC: []
-}
-
-export interface PIFINA_DASHBOARD_CONF_ITEM {
-    key: string
-    title: string
-    type: string
-    charts?: (string[]| string)[]
-    groupName?: string
-    disableSessionFilter: boolean
-}
-
-export interface PIFINA_DASHBOARD_CONF_TYPE {
-    HOSTTYPE_TOFINO: PIFINA_DASHBOARD_CONF_ITEM[]
-    HOSTTYPE_NIC: PIFINA_DASHBOARD_CONF_ITEM[]
+    HOSTTYPE_NIC: [
+        {
+            key: "ETHTOOL_CHARTS",
+            title: "Ethtool",
+            type: "static",
+            charts: PIFINA_ETHTOOL_CHART_ORDER,
+            disableSessionFilter: true
+        },
+        {
+            key: "NEOHOST_CHARTS",
+            title: "NEO-Host",
+            type: "static",
+            charts: PIFINA_NEO_CHART_ORDER,
+            disableSessionFilter: true
+        }
+    ]
 }

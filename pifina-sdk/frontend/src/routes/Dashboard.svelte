@@ -1,15 +1,17 @@
 <script lang="ts">
 	import type {  MetricData, MetricNameGroup } from '../lib/models/MetricItem';
-	import type { DTOTelemetryMessage, EndpointModel } from '$lib/models/EndpointModel';
+	import { EndpointType, type DTOTelemetryMessage, type EndpointModel } from '$lib/models/EndpointModel';
 	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
 	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 	import TofinoDashboardType from '$lib/dashboardType/TofinoDashboardType.svelte';
+	import { MetricTypes } from '$lib/models/metricTypes';
+	import NicDashboardType from '$lib/dashboardType/NICDashboardType.svelte';
 
     export let endpoints: EndpointModel[];
 
 	let groupIds: number[] = [...new Set(endpoints.map(item => item.groupId))];
 	let selectedGroupid: number = endpoints[0]?.groupId || 1;
-    let selectedEndpoint: string = endpoints[0]?.name || "";
+    let selectedEndpoint: EndpointModel = endpoints[0];
 	let sessionIds = new Set<number>();
 	let selectedSessionIds: number[] = [];
 	let sessionIdFilterIsDirty = false;
@@ -28,24 +30,27 @@
 	worker.port.onmessage = (event: MessageEvent) => {
 		let telemetryMessage: DTOTelemetryMessage = event.data;
 		// Skip any message not related
-		if (telemetryMessage.source != selectedEndpoint) {
+		if (telemetryMessage.source != selectedEndpoint.name) {
 			return
 		}
 
 		telemetryMessage.metrics.forEach(item => {
-			let key = `${item.metricName}${item.type}`;
-			// Check if it's a metric from a default probe
-			if (!item.metricName.startsWith("PF_")) {
-				metricNamesGroupedByType["appRegister"].add(item.metricName);
-				key = item.metricName;
-			}
-			if (item.metricName.startsWith("PF_TM_")) {
-				metricNamesGroupedByType["tmMetrics"].add(item.metricName)
-				key = item.metricName;
-			}
-			if (item.metricName.startsWith("PF_EXTRA")) {
-				metricNamesGroupedByType["extraProbes"].add(item.metricName);
-				key = item.metricName;
+			let key = item.metricName;
+			if (telemetryMessage.type === EndpointType.HOSTTYPE_TOFINO) {
+				key = `${item.metricName}${item.type}`;
+				// Check if it's a metric from a default probe
+				if (!item.metricName.startsWith("PF_")) {
+					metricNamesGroupedByType["appRegister"].add(item.metricName);
+					key = item.metricName;
+				}
+				if (item.metricName.startsWith("PF_TM_")) {
+					metricNamesGroupedByType["tmMetrics"].add(item.metricName)
+					key = item.metricName;
+				}
+				if (item.metricName.startsWith("PF_EXTRA")) {
+					metricNamesGroupedByType["extraProbes"].add(item.metricName);
+					key = item.metricName;
+				}
 			}
 			// check if key exists. If not, create a new list.
 			if (!(key in metricData)) {
@@ -91,7 +96,7 @@
 		// Delete all existing metrics from map
 		// Will be refilled by event source.
 		metricData = {};
-		endpointFilterStore.set(selectedEndpoint);
+		endpointFilterStore.set(selectedEndpoint.name);
 	}
 
 	const onSessionIdFilterChange = () => {
@@ -128,7 +133,7 @@
 		<div class="mt-2">
 			<select bind:value={selectedEndpoint} on:change={onEndpointChange} name="target" class="px-3 py-3 placeholder-slate-300 text-slate-600 relative bg-white bg-white rounded text-sm border-0 shadow outline-none focus:outline-none focus:ring w-full">
 				{#each endpoints as endpoint }
-				<option value={endpoint.name}>{endpoint.name}</option>
+				<option value={endpoint}>{endpoint.name}</option>
 				{/each}
 			</select>
 		</div>
@@ -164,4 +169,10 @@
 		</div>
 	</div>
 </div>
+{#if selectedEndpoint.type == EndpointType.HOSTTYPE_TOFINO }
 <TofinoDashboardType metricData={metricData} metricNameGroup={metricNamesGroupedByType}></TofinoDashboardType>
+{:else if selectedEndpoint.type == EndpointType.HOSTTYPE_NIC }
+<NicDashboardType metricData={metricData}></NicDashboardType>
+{:else}
+Unknown Host type. Cannot visualize metrics for this type of MetricTypes.
+{/if}
