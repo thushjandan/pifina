@@ -1,17 +1,22 @@
 <script lang="ts">
 	import Chart from '../lib/components/Chart.svelte';
 	import * as Plot from "@observablehq/plot";
-	import type { DTOPifinaMetricItem, MetricData } from '../lib/models/MetricItem';
-	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG, PROBE_INGRESS_JITTER } from '$lib/models/metricNames';
+	import type {  MetricData } from '../lib/models/MetricItem';
+	import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_PROBE_CHART_CFG, Y_AXIS_NAME_BYTE_RATE } from '$lib/models/metricNames';
 	import { ChartMenuCategoryModel } from '$lib/models/ChartMenuCategory';
 	import TmMetricCharts from '$lib/components/TMMetricCharts.svelte';
-	import type { EndpointModel } from '$lib/models/EndpointModel';
+	import type { DTOTelemetryMessage, EndpointModel } from '$lib/models/EndpointModel';
 	import { PifinaMetricName } from '$lib/models/metricTypes';
+	import ChartPanel from '$lib/components/ChartPanel.svelte';
+	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
+	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 
     export let endpoints: EndpointModel[];
 
 	let clientFullScreenWidth;
 	let clientHalfScreenWidth;
+	let groupIds: number[] = [...new Set(endpoints.map(item => item.groupId))];
+	let selectedGroupid: number = endpoints[0]?.groupId || 1;
     let selectedEndpoint: string = endpoints[0]?.name || "";
 	let sessionIds = new Set<number>();
 	let selectedSessionIds: number[] = [];
@@ -23,13 +28,18 @@
 	let selectedChartCategory = ChartMenuCategoryModel.MAIN_CHARTS;
 	let isEnabled = true;
 
+	endpointFilterStore.set(endpoints[0]?.name || "");
 	let worker = new SharedWorker(new URL('$lib/sharedworker/sharedworker.ts', import.meta.url), {type: 'module'});
 
-	worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+	worker.port.postMessage({status: "CONNECT", groupId: selectedGroupid});
 	worker.port.onmessage = (event: MessageEvent) => {
-		let dataobj: DTOPifinaMetricItem[] = event.data;
+		let telemetryMessage: DTOTelemetryMessage = event.data;
+		// Skip any message not related
+		if (telemetryMessage.source != selectedEndpoint) {
+			return
+		}
 
-		dataobj.forEach(item => {
+		telemetryMessage.metrics.forEach(item => {
 			let key = `${item.metricName}${item.type}`;
 			// Check if it's a metric from a default probe
 			if (!item.metricName.startsWith("PF_")) {
@@ -66,6 +76,7 @@
 				selectedSessionIds.push(sessionId);
 			}
 			sessionIds = sessionIds;
+			sessionFilterStore.set(selectedSessionIds);
 		}
 
 		// Limit series length
@@ -85,17 +96,29 @@
 	}
 
 
+	const onHostGroupChange = () => {
+		worker.port.postMessage({status: "CONNECT", groupId: selectedGroupid});
+	}
+
 	const onEndpointChange = () => {
-		worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+		// Delete all existing metrics from map
+		// Will be refilled by event source.
+		metricData = {};
+		endpointFilterStore.set(selectedEndpoint);
+	}
+
+	const onSessionIdFilterChange = () => {
+		sessionIdFilterIsDirty = true;
+		sessionFilterStore.set(selectedSessionIds);
 	}
 
 	const toggleEventStreaming = () => {
 		if (isEnabled) {
 			// Close previous event source
-			worker.port.postMessage({status: "CLOSE", endpoint: selectedEndpoint});
+			worker.port.postMessage({status: "CLOSE", groupId: selectedGroupid});
 		}
 		if (!isEnabled) {
-			worker.port.postMessage({status: "CONNECT", endpoint: selectedEndpoint});
+			worker.port.postMessage({status: "CONNECT", groupId: selectedGroupid});
 		}
 		isEnabled = !isEnabled;
 	}
@@ -122,7 +145,17 @@
 </script>
 
 <div class="grid grid-cols-4">
-	<div class="sm:col-span-1">
+	<div class="sm:col-span-1 mx-2">
+		<label for="target" class="block text-sm font-medium leading-6 text-gray-900">Choose a Group:</label>
+		<div class="mt-2">
+			<select bind:value={selectedGroupid} on:change={onHostGroupChange} name="target" class="px-3 py-3 placeholder-slate-300 text-slate-600 relative bg-white bg-white rounded text-sm border-0 shadow outline-none focus:outline-none focus:ring w-full">
+				{#each groupIds as id }
+				<option value={id}>Group {id}</option>
+				{/each}
+			</select>
+		</div>
+	</div>
+	<div class="sm:col-span-1 mx-2">
 		<label for="target" class="block text-sm font-medium leading-6 text-gray-900">Choose a monitoring target:</label>
 		<div class="mt-2">
 			<select bind:value={selectedEndpoint} on:change={onEndpointChange} name="target" class="px-3 py-3 placeholder-slate-300 text-slate-600 relative bg-white bg-white rounded text-sm border-0 shadow outline-none focus:outline-none focus:ring w-full">
@@ -132,7 +165,7 @@
 			</select>
 		</div>
 	</div>
-	<div class="sm:col-span-3 justify-self-end">
+	<div class="sm:col-span-2 justify-self-end">
 		<div class="mt-2 mr-4">
 			<button on:click={toggleEventStreaming} class:bg-orange-600={isEnabled} class:hover:bg-orange-800={isEnabled} class:bg-green-600={!isEnabled} class:hover:bg-green-600={!isEnabled} class="text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">
 				{#if isEnabled}
@@ -184,7 +217,7 @@
 			<div class="mt-2 flex flex-row">
 				{#each [...sessionIds.values()] as sessionId}
 						<div class="items-center">
-							<input type=checkbox bind:group={selectedSessionIds} on:change={() => sessionIdFilterIsDirty = true} name="sessionIds" value={sessionId} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
+							<input type=checkbox bind:group={selectedSessionIds} on:change={onSessionIdFilterChange} name="sessionIds" value={sessionId} class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600" />
 							<label for="comments" class="ml-1 mr-4 font-medium text-gray-900">{sessionId}</label>
 						</div>
 				{/each}
@@ -196,67 +229,13 @@
 	<div class="mt-8 grid md:grid-cols-2">
 		{#each probeItem as subProbeItem }
 		{#if subProbeItem in metricData }
-		<div bind:clientWidth={clientHalfScreenWidth} class="mt-8 pt-4">
-			<div class="grid grid-cols-4">
-				<div class="sm:col-span-3">
-					<h2>{PIFINA_PROBE_CHART_CFG[subProbeItem]['title']}</h2>
-				</div>
-				<div class="sm:col-span-1 justify-self-end pr-4">
-					<button on:click={() => openDetailView(subProbeItem)} class="bg-indigo-600 hover:bg-indigo-800 text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">
-						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="inline w-4 h-4 mr-2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-						</svg>					  
-						Open
-					</button>
-				</div>
-			</div>
-			<Chart options={{
-				x: xScaleOptions,
-				y: {
-					label: PIFINA_PROBE_CHART_CFG[subProbeItem]['yAxisName'],
-					grid: true
-				},
-				width: clientHalfScreenWidth,
-				color: {legend: true, type: "categorical"},
-				marks: [
-					Plot.line(metricData[subProbeItem], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: 'sessionId', marker: "dot"}),
-					Plot.tip(metricData[subProbeItem], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
-				]
-			}} />
-		</div>
+			<ChartPanel chartTitle={PIFINA_PROBE_CHART_CFG[subProbeItem]['title']} metricAttributeName={subProbeItem} metricData={metricData[subProbeItem]} yAxisLabel={PIFINA_PROBE_CHART_CFG[subProbeItem]['yAxisName']} screenWidth={clientHalfScreenWidth} />
 		{/if}
 		{/each}
 	</div>
 	{:else}
 		{#if probeItem in metricData }
-			<div bind:clientWidth={clientFullScreenWidth} class="mt-8 pt-4 w-full">
-				<div class="grid grid-cols-4">
-					<div class="sm:col-span-1">
-						<h2>{PIFINA_PROBE_CHART_CFG[probeItem]['title']}</h2>
-					</div>
-					<div class="sm:col-span-3 justify-self-end">
-						<button on:click={() => openDetailView(String(probeItem))} class="bg-indigo-600 hover:bg-indigo-800 text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">
-							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="inline w-4 h-4 mr-2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-							</svg>					  
-							Open
-						</button>
-					</div>
-				</div>
-				<Chart options={{
-					x: xScaleOptions,
-					y: {
-						label: PIFINA_PROBE_CHART_CFG[probeItem]['yAxisName'],
-						grid: true
-					},
-					width: clientFullScreenWidth,
-					color: {legend: true, type: "categorical"},
-					marks: [
-						Plot.line(metricData[probeItem], {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: "sessionId", marker: "dot"}),
-						Plot.tip(metricData[probeItem], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
-					]
-				}} />
-			</div>
+			<ChartPanel chartTitle={PIFINA_PROBE_CHART_CFG[probeItem]['title']} metricAttributeName={probeItem} metricData={metricData[probeItem]} yAxisLabel={PIFINA_PROBE_CHART_CFG[probeItem]['yAxisName']} screenWidth={clientHalfScreenWidth} />
 		{/if}
 	{/if}		
 	{/each}
@@ -265,68 +244,14 @@
 {#if isExtraProbesChartSelected() == true }
 <div class="divide-y divide-solid">
 	{#each [...extraProbeNames.values()] as entry }
-	<div bind:clientWidth={clientFullScreenWidth} class="mt-8 pt-4">
-		<div class="grid grid-cols-4">
-			<div class="sm:col-span-1">
-				<h2>{entry}</h2>
-			</div>
-			<div class="sm:col-span-3 justify-self-end">
-				<button on:click={() => openDetailView(entry)} class="bg-indigo-600 hover:bg-indigo-800 text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">
-					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="inline w-4 h-4 mr-2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-					</svg>					  
-					Open
-				</button>
-			</div>
-		</div>
-		<Chart options={{
-			x: xScaleOptions,
-			y: {
-				label: "bytes/sec",
-				grid: true
-			},
-			width: clientFullScreenWidth,
-			color: {legend: true, type: "categorical"},
-			marks: [
-				Plot.line(metricData[entry], {x: "timestamp", y: "value", stroke: (d) => `${d.sessionId}`, marker: "dot"}),
-				Plot.tip(metricData[entry], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
-			]
-		}} />
-	</div>
+	<ChartPanel chartTitle={entry} metricAttributeName={entry} metricData={metricData[entry]} yAxisLabel={Y_AXIS_NAME_BYTE_RATE} screenWidth={clientFullScreenWidth} />
 	{/each}
 </div>
 {/if}
 {#if isAppRegChartSelected() == true }
 <div class="divide-y divide-solid">
 	{#each [...appRegister.values()] as entry }
-	<div bind:clientWidth={clientFullScreenWidth} class="mt-8 pt-4">
-		<div class="grid grid-cols-4">
-			<div class="sm:col-span-1">
-				<h2>{entry} register (app-owned)</h2>
-			</div>
-			<div class="sm:col-span-3 justify-self-end">
-				<button on:click={() => openDetailView(entry)} class="bg-indigo-600 hover:bg-indigo-800 text-white text-center font-medium rounded-lg text-sm w-full sm:w-auto px-3 py-2.5 mr-2">
-					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="inline w-4 h-4 mr-2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-					</svg>					  
-					Open
-				</button>
-			</div>
-		</div>
-		<Chart options={{
-			x: xScaleOptions,
-			y: {
-				label: "current",
-				grid: true
-			},
-			width: clientFullScreenWidth,
-			color: {legend: true, type: "categorical"},
-			marks: [
-				Plot.line(metricData[entry], {x: "timestamp", y: "value", stroke: (d) => `${d.sessionId}`, marker: "dot"}),
-				Plot.tip(metricData[entry], Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}})),
-			]
-		}} />
-	</div>		
+	<ChartPanel chartTitle={`${entry} register (app-owned)`} metricAttributeName={entry} metricData={metricData[entry]} yAxisLabel={"current"} screenWidth={clientFullScreenWidth} disableSeriesFilter={true} />
 	{/each}
 </div>
 {/if}
