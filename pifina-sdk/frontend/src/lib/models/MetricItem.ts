@@ -16,3 +16,7 @@ export interface DTOPifinaMetricItem {
     value: number
     timestamp: string
 }
+
+export interface MetricNameGroup {
+    [key: string]: Set<string>
+}

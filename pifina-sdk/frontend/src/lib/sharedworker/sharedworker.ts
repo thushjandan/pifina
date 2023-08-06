@@ -1,4 +1,5 @@
 import type { DTOTelemetryMessage } from "$lib/models/EndpointModel";
+import { PifinaMetricName } from "$lib/models/metricTypes";
 
 let evtSource: EventSource;
 let ports: MessagePort[] = [];
@@ -7,6 +8,15 @@ const evtSourceURL = MODE === 'development' ? 'https://localhost:8655' : ''
 
 const evtSourceMessage = function(event: MessageEvent) {
     let dataobj: DTOTelemetryMessage = JSON.parse(event.data);
+    dataobj.metrics = dataobj.metrics.map(item => {
+        // Convert nano seconds to miliseconds
+        if (item.metricName == PifinaMetricName.INGRESS_JITTER_AVG) {
+            if (item.value > 0) {
+                item.value = Math.round(item.value / 1000);
+            }
+        }
+        return item
+    })
     ports.forEach(port => {
         port.postMessage(dataobj);
     });
