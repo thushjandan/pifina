@@ -119,6 +119,7 @@ Following match types can be used: exact, ternary, lpm`,
 							},
 							&cli.IntFlag{
 								Name:     "sample-interval",
+								Aliases:  []string{"i"},
 								Value:    15,
 								Required: false,
 								Usage:    "Sample interval in seconds.",

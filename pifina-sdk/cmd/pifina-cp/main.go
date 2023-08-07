@@ -49,11 +49,16 @@ func main() {
 	})
 	logger.Debug("configured endpoints", "bfrt_endpoint", *bfrt_endpoint, "pifina_collector", *collector_server)
 
-	_, _, err := net.SplitHostPort(*bfrt_endpoint)
-	if err != nil {
+	if _, _, err := net.SplitHostPort(*bfrt_endpoint); err != nil {
 		logger.Error("Invalid BFRT address. example format 127.0.0.1:50052")
 		os.Exit(1)
 	}
+
+	if _, _, err := net.SplitHostPort(*collector_server); err != nil {
+		logger.Error("Invalid PIFINA collector server address. example format pifina.local:8654")
+		os.Exit(1)
+	}
+
 	if *p4_name == "" {
 		logger.Error("Invalid P4 app name. Specify the name of the running P4 application on the switch. e.g. myapp")
 		os.Exit(1)
@@ -86,7 +91,7 @@ func main() {
 	}
 
 	controller := controller.NewTofinoController(options)
-	err = controller.StartController(ctx, &wg)
+	err := controller.StartController(ctx, &wg)
 	if err != nil {
 		logger.Error("cannot start the controller", "err", err)
 	}

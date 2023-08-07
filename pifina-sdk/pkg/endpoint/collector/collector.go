@@ -13,6 +13,7 @@ type EndpointCollector struct {
 	metricSinkChan          chan *model.SinkEmitCommand
 	neohost                 *neohost.NeoHostDriver
 	neoHostCounterNameCache map[string]empty
+	ethNameCache            map[string]string
 	sink                    *sink.Sink
 }
 
@@ -47,5 +48,6 @@ func NewEndpointCollector(options *EndpointCollectorOptions) *EndpointCollector 
 		neohost:                 neohost,
 		neoHostCounterNameCache: counterNameCache,
 		metricSinkChan:          options.MetricSinkChan,
+		ethNameCache:            make(map[string]string), // EthName <-> user defined Name
 	}
 }

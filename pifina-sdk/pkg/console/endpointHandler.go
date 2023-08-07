@@ -2,6 +2,7 @@ package console
 
 import (
 	"context"
+	"net"
 	"os"
 	"os/signal"
 	"sync"
@@ -105,6 +106,11 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 
 	metricSinkChan := make(chan *model.SinkEmitCommand)
 
+	if _, _, err := net.SplitHostPort(cCtx.String("server")); err != nil {
+		logger.Error("Given server address is invalid", "err", err)
+		return err
+	}
+
 	// Init sink
 	sink := sink.NewSink(logger, model.HOSTTYPE_NIC, cCtx.String("server"), uint32(cCtx.Uint("group-id")))
 	wg.Add(1)
@@ -126,7 +132,7 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 	if collector.IsNeoSDKExists() && !cCtx.Bool("disable-neohost") {
 		// Collect metrics from Neo SDK and ETHtool
 		logger.Debug("Retrieving performance counters", "dev", targetDevices)
-		err := collector.CollectMlxPerfCounters(ctx, &wg, targetDevices)
+		err := collector.StartMlxPerfCountersCollection(ctx, &wg, targetDevices)
 		if err != nil {
 			logger.Error("Error occured retrieving all Connect-X NICs", "err", err)
 			return err
@@ -147,7 +153,7 @@ func CollectNICPerfCounterCliAction(cCtx *cli.Context) error {
 			}
 		}
 		// start collector from ethtool
-		collector.CollectEthCounter(ctx, &wg, targetDevices)
+		collector.StartEthCounterCollection(ctx, &wg, targetDevices)
 	}
 
 	// Wait until all threads have terminated gracefully

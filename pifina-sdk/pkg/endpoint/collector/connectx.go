@@ -43,7 +43,7 @@ func (c *EndpointCollector) ListMlxNetworkCards() error {
 
 // Starts collection of performance counter from ConnectX card.
 // In addition it starts collection of ethtool stats too.
-func (c *EndpointCollector) CollectMlxPerfCounters(ctx context.Context, wg *sync.WaitGroup, targetDevices []string) error {
+func (c *EndpointCollector) StartMlxPerfCountersCollection(ctx context.Context, wg *sync.WaitGroup, targetDevices []string) error {
 	// Retrieve information about Mellanox interfaces
 	result, err := c.neohost.ListMlxNetworkCards()
 	if err != nil {
@@ -67,20 +67,21 @@ func (c *EndpointCollector) CollectMlxPerfCounters(ctx context.Context, wg *sync
 			return &model.ErrNameNotFound{Entity: targetDevice, Msg: "Device not found"}
 		}
 		ethNames = append(ethNames, ethName)
+		c.ethNameCache[ethName] = targetDevice
 	}
 
 	for device, uid := range devUids {
-		go c.GetMlxPerformanceCounters(ctx, wg, device, uid)
+		go c.GetMlxPerformanceCountersThread(ctx, wg, device, uid)
 		wg.Add(1)
 	}
 
 	// Start Ethtool counter
-	c.CollectEthCounter(ctx, wg, ethNames)
+	c.StartEthCounterCollection(ctx, wg, ethNames)
 
 	return nil
 }
 
-func (c *EndpointCollector) GetMlxPerformanceCounters(ctx context.Context, wg *sync.WaitGroup, targetDevice string, uid string) error {
+func (c *EndpointCollector) GetMlxPerformanceCountersThread(ctx context.Context, wg *sync.WaitGroup, targetDevice string, uid string) error {
 	defer wg.Done()
 
 	// Initialize ticker
@@ -88,34 +89,39 @@ func (c *EndpointCollector) GetMlxPerformanceCounters(ctx context.Context, wg *s
 	defer ticker.Stop()
 
 	c.logger.Info("Collecting performance counters from NEO-SDK in background", "dev", targetDevice)
+	c.getMlxPerformanceCountersHandler(targetDevice, uid)
 
 	for {
 		select {
 		case <-ticker.C:
-			timeNow := time.Now()
-			// Get counters from NEO-Host
-			perfCounters, err := c.neohost.GetPerformanceCounters(uid)
-			if err != nil {
-				c.logger.Warn("Error occured during performance counter collection", "device", targetDevice, "err", err)
-				continue
-			}
-			// Transform metrics to MetricItem object
-			metrics := c.transformNeoHostMetrics(perfCounters)
-			if c.logger.GetLevel() == hclog.Debug {
-				if jsonMetrics, err := json.Marshal(metrics); err != nil {
-					c.logger.Debug("Transformed performance counters from NEO Host", "dev", targetDevice, "metrics", jsonMetrics)
-				} else {
-					c.logger.Debug("Transformed performance counters from NEO Host", "dev", targetDevice, "metrics", metrics)
-				}
-			}
-			// Send metrics
-			c.metricSinkChan <- &model.SinkEmitCommand{SourceSuffix: targetDevice, Metrics: metrics}
-			c.logger.Debug("Time duration of the collection", "dev", targetDevice, "duration", time.Since(timeNow))
+			c.getMlxPerformanceCountersHandler(targetDevice, uid)
 		case <-ctx.Done():
 			c.logger.Info("Stopping neohost collector...", "dev", targetDevice)
 			return nil
 		}
 	}
+}
+
+func (c *EndpointCollector) getMlxPerformanceCountersHandler(targetDevice string, uid string) {
+	timeNow := time.Now()
+	// Get counters from NEO-Host
+	perfCounters, err := c.neohost.GetPerformanceCounters(uid)
+	if err != nil {
+		c.logger.Warn("Error occured during performance counter collection", "device", targetDevice, "err", err)
+		return
+	}
+	// Transform metrics to MetricItem object
+	metrics := c.transformNeoHostMetrics(perfCounters)
+	if c.logger.GetLevel() == hclog.Debug {
+		if jsonMetrics, err := json.Marshal(metrics); err != nil {
+			c.logger.Debug("Transformed performance counters from NEO Host", "dev", targetDevice, "metrics", jsonMetrics)
+		} else {
+			c.logger.Debug("Transformed performance counters from NEO Host", "dev", targetDevice, "metrics", metrics)
+		}
+	}
+	// Send metrics
+	c.metricSinkChan <- &model.SinkEmitCommand{SourceSuffix: targetDevice, Metrics: metrics}
+	c.logger.Debug("Time duration of the collection", "dev", targetDevice, "duration", time.Since(timeNow))
 }
 
 // Transform NEO-Host result to a slice of MetricItem

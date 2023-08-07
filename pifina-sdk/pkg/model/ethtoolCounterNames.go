@@ -6,4 +6,5 @@ var ETHTOOL_COUNTERS = []string{
 	"rx_discards_phy",
 	"tx_discards_phy",
 	"rx_out_of_buffer",
+	"rx_queue_0_packets",
 }
