@@ -1,3 +1,10 @@
+<!--
+ Copyright (c) 2023 Thushjandan Ponnudurai
+ 
+ This software is released under the MIT License.
+ https://opensource.org/licenses/MIT
+-->
+
 <script lang="ts">
 	import type {  MetricData, MetricNameGroup } from '../lib/models/MetricItem';
 	import { EndpointType, type DTOTelemetryMessage, type EndpointModel } from '$lib/models/EndpointModel';

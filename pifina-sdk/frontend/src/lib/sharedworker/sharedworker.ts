@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Thushjandan Ponnudurai
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 import type { DTOTelemetryMessage } from "$lib/models/EndpointModel";
 import { PifinaMetricName } from "$lib/models/metricTypes";
 

@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Thushjandan Ponnudurai
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 import type { PIFINA_DASHBOARD_CONF_TYPE } from "$lib/models/dashboardConfigModel";
 import { PIFINA_DEFAULT_PROBE_CHART_ORDER, PIFINA_ETHTOOL_CHART_ORDER, PIFINA_NEO_CHART_ORDER, PIFINA_TM_CHART_ORDER } from "./chartOrderConfig";
 

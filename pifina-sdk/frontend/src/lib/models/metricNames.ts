@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Thushjandan Ponnudurai
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 import { tickFormat } from "d3";
 import type { PIFINA_CHART_CONFIG, PIFINA_CHART_CONF_ITEM } from "./dashboardConfigModel";
 import { MetricTypes, PifinaMetricName } from "./metricTypes";

@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Thushjandan Ponnudurai
+//
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 package main
 
 import (
@@ -24,7 +29,7 @@ var (
 func main() {
 	compiled_date, _ := time.Parse(time.RFC3339, date)
 	app := &cli.App{
-		Name:     "pifina-cli",
+		Name:     "pifina",
 		Version:  version,
 		Compiled: compiled_date,
 		Authors: []*cli.Author{
@@ -38,7 +43,7 @@ func main() {
 			{
 				Name:    "generate",
 				Aliases: []string{"g"},
-				Usage:   `Example: pifina-cli create -k hdr.ipv4.protocol:exact -k hdr.ipv4.dstAddr:ternary -k hdr.ipv4.srcAddr:ternary -o src/myP4app/include `,
+				Usage:   `Example: pifina create -k hdr.ipv4.protocol:exact -k hdr.ipv4.dstAddr:ternary -k hdr.ipv4.srcAddr:ternary -o src/myP4app/include `,
 				Description: `Creates customized Pifina P4 source code with user defined match fields. 
 Use for every match key the flag -key and define the name of the field together with its match type delimited by a colon (:) like field1:matchType
 In addition the output directory for the generated P4 source code files needs to be defined with flag -o
@@ -85,19 +90,25 @@ Following match types can be used: exact, ternary, lpm`,
 				Action: console.CreateTemplateCliAction,
 			},
 			{
-				Name:    "nic",
-				Aliases: []string{"n"},
-				Action:  console.ListMlxDevicesCliAction,
+				Name:        "nic",
+				Aliases:     []string{"n"},
+				Usage:       "Example: pifina nic collect -d mlx5_1 -s pifina-collector.local:8654",
+				Description: `Collector for Mellanox Connect-X NICs`,
+				Action:      console.ListMlxDevicesCliAction,
 				Subcommands: []*cli.Command{
 					{
-						Name:    "list",
-						Aliases: []string{"l"},
-						Action:  console.ListMlxDevicesCliAction,
+						Name:        "list",
+						Usage:       "How to run: pifina nic list",
+						Description: "Prints all available Mellanox Connect-X NICs on this machine. Needs to be run as root",
+						Aliases:     []string{"l"},
+						Action:      console.ListMlxDevicesCliAction,
 					},
 					{
-						Name:    "collect",
-						Aliases: []string{"c"},
-						Action:  console.CollectNICPerfCounterCliAction,
+						Name:        "collect",
+						Aliases:     []string{"c"},
+						Usage:       "How to run: pifina nic collect -d mlx5_1 -s pifina-collector.local:8654",
+						Description: `Collects metrics from Mellanox Connect-X NIC using Mellanox NEO Host SDK and ethtool. All collected metrics will be sent to a PIFINA collector. Use -d to define the mellanox device and -s to define the PIFINA collector server address as host:port`,
+						Action:      console.CollectNICPerfCounterCliAction,
 						Flags: []cli.Flag{
 							&cli.StringSliceFlag{
 								Name:     "dev",
@@ -110,18 +121,18 @@ Following match types can be used: exact, ternary, lpm`,
 								Aliases:  []string{"s"},
 								Value:    "127.0.0.1:8654",
 								Required: false,
-								Usage:    "PIFINA collector server address",
+								Usage:    "PIFINA collector server address as 'host:port'. E.g. pifina-collector.local:8654",
 							},
 							&cli.UintFlag{
 								Name:     "group-id",
 								Value:    1,
 								Required: false,
-								Usage:    "Group Identifier for PIFINA collector server. Used to group multiple probes together.",
+								Usage:    "Group Identifier for PIFINA collector server. Used to group multiple probes together. Needs to be a positive number",
 							},
 							&cli.IntFlag{
 								Name:     "sample-interval",
 								Aliases:  []string{"i"},
-								Value:    15,
+								Value:    10,
 								Required: false,
 								Usage:    "Sample interval in seconds.",
 							},
@@ -163,6 +174,9 @@ Following match types can be used: exact, ternary, lpm`,
 			{
 				Name:   "serve",
 				Action: web.ServeWebserverHandler,
+				Description: `Runs the PIFINA collector server. Serves the metric sink and the web frontend. This component can be run on a central server, which receives the metrics from multiple probes and serves the web frontend to enduser.
+				This component can be only reached over HTTPS. A default unsecure TLS certificate will be used by default. Please create a new TLS certificate using e.g. openssl. Use afterward -key to define the key and -cert the certificate.`,
+				Usage: "How to run: pifina serve",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "level",

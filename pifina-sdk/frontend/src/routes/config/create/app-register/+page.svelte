@@ -1,3 +1,10 @@
+<!--
+ Copyright (c) 2023 Thushjandan Ponnudurai
+ 
+ This software is released under the MIT License.
+ https://opensource.org/licenses/MIT
+-->
+
 <script lang="ts">
 	import type { AppRegisterModel } from "$lib/models/AppRegister";
 	import { onDestroy } from "svelte";

@@ -1,3 +1,9 @@
+// Copyright (c) 2023 Thushjandan Ponnudurai
+//
+// Credit for the skiplist implementation to github.com/sean-public/fast-skiplist
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 package skiplist
 
 import (

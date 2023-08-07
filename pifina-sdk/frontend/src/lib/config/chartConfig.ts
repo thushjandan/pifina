@@ -1,3 +1,8 @@
+// Copyright (c) 2023 Thushjandan Ponnudurai
+// 
+// This software is released under the MIT License.
+// https://opensource.org/licenses/MIT
+
 import type { PIFINA_CHART_CONFIG, PIFINA_CHART_CONF_ITEM } from "$lib/models/dashboardConfigModel";
 import * as pb from "$lib/models/metricNames";
 

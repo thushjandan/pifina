@@ -1,13 +1,4 @@
 /* -*- P4_16 -*- */
-/**
-* PIFINA demo application
-*
-* Copyright 2023 Thushjandan Ponnudurai
-*
-* This software may be modified and distributed under the terms
-* of the MIT license.  See the LICENSE file for details.
-*/
-
 /* TOFINO Native architecture */
 #include <core.p4>
 #include <tna.p4>

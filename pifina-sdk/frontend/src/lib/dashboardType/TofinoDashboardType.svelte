@@ -1,3 +1,10 @@
+<!--
+ Copyright (c) 2023 Thushjandan Ponnudurai
+ 
+ This software is released under the MIT License.
+ https://opensource.org/licenses/MIT
+-->
+
 <script lang="ts">
     import ChartPanel from '$lib/components/ChartPanel.svelte';
 	import { getPifinaChartConfigByMetricName, getTickFormatFromPifinaChartConfig } from '$lib/config/chartConfig';

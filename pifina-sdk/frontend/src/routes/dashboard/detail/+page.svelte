@@ -1,3 +1,10 @@
+<!--
+ Copyright (c) 2023 Thushjandan Ponnudurai
+ 
+ This software is released under the MIT License.
+ https://opensource.org/licenses/MIT
+-->
+
 <script lang="ts">
     import * as Plot from "@observablehq/plot";
 	import Chart from "../../../lib/components/Chart.svelte";
