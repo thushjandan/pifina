@@ -25,8 +25,8 @@ func NewPifinaMetricReceiver(logger hclog.Logger, ed *endpoints.PifinaEndpointDi
 	}
 }
 
-func (r *MetricReceiver) StartServer(ctx context.Context, port string, telemetryChannel chan *model.TelemetryMessage) error {
-	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", port))
+func (r *MetricReceiver) StartServer(ctx context.Context, port uint, telemetryChannel chan *model.TelemetryMessage) error {
+	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return err
 	}

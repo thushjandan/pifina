@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/generator"
+	"github.com/thushjandan/pifina/pkg/console/generator"
 	"github.com/thushjandan/pifina/pkg/model"
 	"github.com/urfave/cli/v2"
 )

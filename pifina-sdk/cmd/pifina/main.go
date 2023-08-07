@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/thushjandan/pifina/pkg/console"
+	"github.com/thushjandan/pifina/pkg/web"
 	"github.com/urfave/cli/v2"
 )
 
@@ -156,6 +157,50 @@ Following match types can be used: exact, ternary, lpm`,
 						Name:     "neo-port",
 						Required: false,
 						Usage:    "port where NEO-host is running. Only required if neo-mode=socket",
+					},
+				},
+			},
+			{
+				Name:   "serve",
+				Action: web.ServeWebserverHandler,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "level",
+						Value:    "info",
+						Required: false,
+						Usage:    "log level",
+					},
+					&cli.UintFlag{
+						Name:     "listen-collector",
+						Value:    8654,
+						Required: false,
+						Usage:    "PIFINA metric port to listen. Probes send metrics to this port.",
+					},
+					&cli.UintFlag{
+						Name:     "listen-web",
+						Value:    8655,
+						Required: false,
+						Usage:    "PIFINA web port to listen. Users connect over HTTPS on this port",
+					},
+					&cli.UintFlag{
+						Name:     "probe-port",
+						Value:    8656,
+						Required: false,
+						Usage:    "Default PIFINA tofino probe API port to proxy",
+					},
+					&cli.StringFlag{
+						Name:     "key",
+						Aliases:  []string{"k"},
+						Value:    "assets/key.pem",
+						Required: false,
+						Usage:    "TLS private key file path for the webserver (https)",
+					},
+					&cli.StringFlag{
+						Name:     "cert",
+						Aliases:  []string{"c"},
+						Value:    "assets/cert.pem",
+						Required: false,
+						Usage:    "TLS certificate file path for the web server (https)",
 					},
 				},
 			},

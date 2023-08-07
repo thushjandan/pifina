@@ -8,35 +8,27 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-  - id: pifina-cp
-    main: ./cmd/pifina-cp/main.go
-    binary: pifina-cp
+  - id: pifina-tofino
+    main: ./cmd/pifina-tofino/main.go
+    binary: pifina-tofino-probe
     env:
       - CGO_ENABLED=0
     goos:
       - linux
     goarch:
       - amd64
+      - arm64
 
-  - id: pifina-web
-    main: ./cmd/pifina-web/main.go
-    binary: pifina-web
+  - id: pifina
+    main: ./cmd/pifina/main.go
+    binary: pifina
     env:
       - CGO_ENABLED=0
     goos:
       - linux
     goarch:
       - amd64
-
-  - id: pifina-cli
-    main: ./cmd/pifina-cli/main.go
-    binary: pifina-cli
-    env:
-      - CGO_ENABLED=0
-    goos:
-      - linux
-    goarch:
-      - amd64
+      - arm64
 
 archives:
   - format: tar.gz

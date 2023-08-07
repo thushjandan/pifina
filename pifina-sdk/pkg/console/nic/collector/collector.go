@@ -2,9 +2,9 @@ package collector
 
 import (
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/controller/sink"
-	"github.com/thushjandan/pifina/pkg/endpoint/dataplane/neohost"
+	"github.com/thushjandan/pifina/pkg/console/nic/dataplane/neohost"
 	"github.com/thushjandan/pifina/pkg/model"
+	"github.com/thushjandan/pifina/pkg/sink"
 )
 
 type EndpointCollector struct {

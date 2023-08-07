@@ -31,7 +31,7 @@ func NewPifinaHttpServer(logger hclog.Logger, ed *endpoints.PifinaEndpointDirect
 	}
 }
 
-func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyFile string, certFile string, telemetryChannel chan *model.TelemetryMessage) {
+func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port uint, keyFile string, certFile string, telemetryChannel chan *model.TelemetryMessage) {
 	assets, _ := pifina.Assets()
 	fs := http.FileServer(http.FS(assets))
 
@@ -78,7 +78,7 @@ func (s *PifinaHttpServer) StartWebServer(ctx context.Context, port string, keyF
 	})
 
 	s.server = &http.Server{
-		Addr:    fmt.Sprintf(":%s", port),
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
 

@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/thushjandan/pifina/pkg/controller/sink"
-	"github.com/thushjandan/pifina/pkg/endpoint/collector"
+	"github.com/thushjandan/pifina/pkg/console/nic/collector"
 	"github.com/thushjandan/pifina/pkg/model"
+	"github.com/thushjandan/pifina/pkg/sink"
 	"github.com/urfave/cli/v2"
 )
 
