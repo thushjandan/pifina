@@ -93,9 +93,6 @@ func (controller *TofinoController) StartController(ctx context.Context, wg *syn
 	<-ctx.Done()
 	// Shutdown API server
 	controller.api.Shutdown()
-	// Close all channels
-	close(metricDataChannel)
-	close(metricsSinkChannel)
 
 	return nil
 }

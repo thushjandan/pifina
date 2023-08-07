@@ -59,7 +59,15 @@ func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitG
 
 	for {
 		select {
-		case newMetric := <-newMetricChannel:
+		case newMetric, ok := <-newMetricChannel:
+			// Check if channel is closed
+			if !ok {
+				// Channel has been closed by the sender, because user has stopped the app
+				bp.logger.Info("Stopping bufferpool...")
+				// Close the sink channel as we are the sender and stop thread
+				close(sinkMetricChannel)
+				return
+			}
 			// Check if buffer pool is ready
 			if !notReady {
 				bp.logger.Trace("Adding a new metric to buffer pool", "metricName", newMetric.MetricName, "sessionId", newMetric.SessionId)
@@ -71,9 +79,6 @@ func (bp *Bufferpool) StartBufferpoolManager(ctx context.Context, wg *sync.WaitG
 				bp.logger.Trace("Sampled metrics", "metrics", allItems)
 				sinkMetricChannel <- &model.SinkEmitCommand{Metrics: allItems}
 			}
-		case <-ctx.Done():
-			bp.logger.Info("Stopping bufferpool...")
-			return
 		}
 	}
 }
