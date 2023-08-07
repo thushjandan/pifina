@@ -7,10 +7,10 @@
 
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import { endpointAddress } from "../../EndpointStore";
-	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/SelectorSchema";
+	import { endpointConfigAddressStore } from "../../../../lib/stores/endpointConfigStore";
+	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/selectorSchema";
 	import { goto } from "$app/navigation";
-	import type { SelectorEntry } from "$lib/models/SelectorEntry";
+	import type { SelectorEntry } from "$lib/models/selectorEntry";
 
     let schemaPromise = Promise.resolve<SelectorSchema[]>([]);
     let localEndpointAddress: string;
@@ -20,7 +20,7 @@
     let createDone = false;
     let createErrorMsg = "";
 
-    const endpointAddrSub = endpointAddress.subscribe(val => {
+    const endpointAddrSub = endpointConfigAddressStore.subscribe(val => {
         localEndpointAddress = val;
         schemaPromise = fetch(`/api/v1/schema?endpoint=${localEndpointAddress}`).then(response => response.json().then((data: SelectorSchema[]) => {
             data = data.filter(elem => elem.name !== FIELD_MATCH_PRIORITY);

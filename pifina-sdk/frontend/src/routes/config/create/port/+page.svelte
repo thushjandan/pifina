@@ -7,10 +7,10 @@
 
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import { endpointAddress } from "../../EndpointStore";
+	import { endpointConfigAddressStore } from "../../../../lib/stores/endpointConfigStore";
 	import { goto } from "$app/navigation";
 	import { fade } from "svelte/transition";
-	import type { DevPortModel } from "$lib/models/DevPortModel";
+	import type { DevPortModel } from "$lib/models/devPortModel";
 
     let localEndpointAddress: string;
     let newEntry: DevPortModel = {name: ""} as DevPortModel;
@@ -21,7 +21,7 @@
     let showModal = false;
 
 
-    const endpointAddrSub = endpointAddress.subscribe(val => {
+    const endpointAddrSub = endpointConfigAddressStore.subscribe(val => {
         localEndpointAddress = val;
         availableRegPromise = fetch(`/api/v1/ports/available?endpoint=${localEndpointAddress}`).then(response => response.json());
     });

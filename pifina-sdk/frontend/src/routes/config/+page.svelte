@@ -7,7 +7,7 @@
 
 <script lang="ts">
 	import EndpointInput from "./EndpointInput.svelte";
-    import { endpointAddress } from "./EndpointStore";
+    import { endpointConfigAddressStore } from "../../lib/stores/endpointConfigStore";
 	import { onDestroy } from 'svelte';
 	import TrafficSelector from "./TrafficSelector.svelte";
 	import AppRegister from "./AppRegister.svelte";
@@ -15,7 +15,7 @@
 
     let localEndpointAddress: string = "";
 
-    const unsubscribeEndpointAddr = endpointAddress.subscribe(value => {
+    const unsubscribeEndpointAddr = endpointConfigAddressStore.subscribe(value => {
         localEndpointAddress = value;
     });
 

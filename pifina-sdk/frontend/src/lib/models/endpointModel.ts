@@ -3,7 +3,7 @@
 // This software is released under the MIT License.
 // https://opensource.org/licenses/MIT
 
-import type { DTOPifinaMetricItem } from "./MetricItem"
+import type { DTOPifinaMetricItem } from "./metricItem"
 
 export interface EndpointModel {
     name: string

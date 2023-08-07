@@ -7,9 +7,9 @@
 
 <script lang="ts">
 	import { onDestroy } from "svelte";
-	import { endpointAddress } from "./EndpointStore";
-	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/SelectorSchema";
-	import type { SelectorEntry } from "$lib/models/SelectorEntry";
+	import { endpointConfigAddressStore } from "../../lib/stores/endpointConfigStore";
+	import { FIELD_MATCH_PRIORITY, MATCH_TYPE_LPM, MATCH_TYPE_TERNARY, type SelectorSchema } from "$lib/models/selectorSchema";
+	import type { SelectorEntry } from "$lib/models/selectorEntry";
 	import { goto } from "$app/navigation";
 	import Modal from "$lib/components/Modal.svelte";
 
@@ -21,7 +21,7 @@
     let closeModal: (() => void);
     let targetRuleToDelete: SelectorEntry;
 
-    const endpointAddrSub = endpointAddress.subscribe(val => {
+    const endpointAddrSub = endpointConfigAddressStore.subscribe(val => {
         if (val === "") {
             return
         }
@@ -62,7 +62,7 @@
     onDestroy(endpointAddrSub);
 </script>
 
-<button type="button" on:click={() => (endpointAddress.set(""))} class="px-3 py-2 text-xs font-medium text-center text-indigo-700 border border-indigo-700 hover:bg-indigo-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg inline-flex items-center dark:border-indigo-500 dark:text-indigo-500 dark:hover:text-white dark:focus:ring-indigo-800 dark:hover:bg-indigo-500">
+<button type="button" on:click={() => (endpointConfigAddressStore.set(""))} class="px-3 py-2 text-xs font-medium text-center text-indigo-700 border border-indigo-700 hover:bg-indigo-700 hover:text-white focus:ring-4 focus:outline-none focus:ring-indigo-300 font-medium rounded-lg inline-flex items-center dark:border-indigo-500 dark:text-indigo-500 dark:hover:text-white dark:focus:ring-indigo-800 dark:hover:bg-indigo-500">
     Go Back
 </button>
 {#await endpointPromise }

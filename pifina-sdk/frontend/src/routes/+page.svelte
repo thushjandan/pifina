@@ -29,7 +29,7 @@
                 <p class="mb-2 text-lg text-gray-500 md:text-xl dark:text-gray-400">Currently no probes are sending any metrics. Please refresh page.</p>
                 {/if}
             {:catch error}
-                <p>Loading endpoints failed! Retry later. {error}</p>                
+                <p class="mb-2 text-lg text-gray-500 md:text-xl dark:text-gray-400">Loading endpoints failed! Retry later. {error}</p>
             {/await }
         </div>
     </div>

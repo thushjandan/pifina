@@ -9,7 +9,7 @@
     import ChartPanel from '$lib/components/ChartPanel.svelte';
 	import { getPifinaChartConfigByMetricName, getTickFormatFromPifinaChartConfig } from '$lib/config/chartConfig';
 	import { PIFINA_DASHBOARD_CONF } from '$lib/config/dashboardConfig';
-	import type { MetricData,MetricNameGroup } from '$lib/models/MetricItem';
+	import type { MetricData,MetricNameGroup } from '$lib/models/metricItem';
 
     export let metricData: MetricData = {};
     export let metricNameGroup: MetricNameGroup = {

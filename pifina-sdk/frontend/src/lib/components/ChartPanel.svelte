@@ -8,7 +8,7 @@
 <script lang="ts">
     import Chart from './Chart.svelte';
     import * as Plot from "@observablehq/plot";
-    import type { MetricItem } from '../models/MetricItem';
+    import type { MetricItem } from '../models/metricItem';
 	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
 	import { groupIdFilterStore } from '$lib/stores/groupIdFilterStore';

@@ -8,9 +8,9 @@
 <script lang="ts">
 	import Modal from "$lib/components/Modal.svelte";
 	import { onDestroy } from "svelte";
-	import { endpointAddress } from "./EndpointStore";
+	import { endpointConfigAddressStore } from "../../lib/stores/endpointConfigStore";
 	import { goto } from "$app/navigation";
-	import type { DevPortModel } from "$lib/models/DevPortModel";
+	import type { DevPortModel } from "$lib/models/devPortModel";
 
     let localEndpointAddress: string;
     let devPortPromise: Promise<DevPortModel[]>;
@@ -19,7 +19,7 @@
     let loading = false;
     let closeModal: (() => void);
 
-    const endpointAddrSub = endpointAddress.subscribe(val => {
+    const endpointAddrSub = endpointConfigAddressStore.subscribe(val => {
         if (val === "") {
             return
         }

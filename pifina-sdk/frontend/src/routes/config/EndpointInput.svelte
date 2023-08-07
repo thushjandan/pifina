@@ -6,8 +6,8 @@
 -->
 
 <script lang="ts">
-	import { EndpointType, type EndpointModel } from "$lib/models/EndpointModel";
-	import { endpointAddress } from "./EndpointStore";
+	import { EndpointType, type EndpointModel } from "$lib/models/endpointModel";
+	import { endpointConfigAddressStore } from "../../lib/stores/endpointConfigStore";
 
     const fetchEndpoints = () => {
         return fetch('/api/v1/endpoints').then(
@@ -24,7 +24,7 @@
     let editErrorMsg = "";
 
     function saveEndpoint(endpoint: string) {
-        endpointAddress.set(endpoint);
+        endpointConfigAddressStore.set(endpoint);
     }
 
     function editEndpoint(endpoint: EndpointModel) {

@@ -6,8 +6,8 @@
 -->
 
 <script lang="ts">
-	import type {  MetricData, MetricNameGroup } from '../lib/models/MetricItem';
-	import { EndpointType, type DTOTelemetryMessage, type EndpointModel } from '$lib/models/EndpointModel';
+	import type {  MetricData, MetricNameGroup } from '../lib/models/metricItem';
+	import { EndpointType, type DTOTelemetryMessage, type EndpointModel } from '$lib/models/endpointModel';
 	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
 	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 	import TofinoDashboardType from '$lib/dashboardType/TofinoDashboardType.svelte';
@@ -183,5 +183,5 @@
 {:else if selectedEndpoint.type == EndpointType.HOSTTYPE_NIC }
 <NicDashboardType metricData={metricData}></NicDashboardType>
 {:else}
-Unknown Host type. Cannot visualize metrics for this type of MetricTypes.
+<p class="mb-2 text-lg text-gray-500 md:text-xl dark:text-gray-400">Unknown Host type. Cannot visualize metrics for this type of MetricTypes.</p>
 {/if}

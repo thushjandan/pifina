@@ -9,9 +9,9 @@
     import * as Plot from "@observablehq/plot";
 	import Chart from "../../../lib/components/Chart.svelte";
 	import { page } from '$app/stores';
-	import type { MetricItem } from "$lib/models/MetricItem";
+	import type { MetricItem } from "$lib/models/metricItem";
 	import { Y_AXIS_NAME_BYTE_RATE } from "$lib/models/metricNames";
-	import { EndpointType, type DTOTelemetryMessage } from "$lib/models/EndpointModel";
+	import { EndpointType, type DTOTelemetryMessage } from "$lib/models/endpointModel";
 	import { PIFINA_PROBE_CHART_CFG, getTickFormatFromPifinaChartConfig } from "$lib/config/chartConfig";
 
 	let selectedGroupId = $page.url.searchParams.get('groupId') || 1;
