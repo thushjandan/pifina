@@ -4,7 +4,7 @@ name: Build Pifina binaries
 on:
   push:
     branches: 
-    # - $default-branch
+      - $default-branch
   pull_request:
     branches: [ $default-branch ]
 
@@ -73,10 +73,7 @@ jobs:
       run: go test -v ./...
 
     - name: Build pifina control plane binary
-      run: go build -o pifina-cp cmd/pifina-cp/main.go
+      run: go build -o pifina-tofino-probe cmd/pifina-tofino/main.go
 
     - name: Build pifina web binary
-      run: go build -o pifina-web cmd/pifina-web/main.go
-
-    - name: Build pifina cli binary
-      run: go build -o pifina-cli cmd/pifina-cli/main.go
+      run: go build -o pifina cmd/pifina/main.go
