@@ -9,10 +9,10 @@ const evtSourceURL = MODE === 'development' ? 'https://localhost:8655' : ''
 const evtSourceMessage = function(event: MessageEvent) {
     let dataobj: DTOTelemetryMessage = JSON.parse(event.data);
     dataobj.metrics = dataobj.metrics.map(item => {
-        // Convert nano seconds to miliseconds
+        // Convert nano seconds to seconds
         if (item.metricName == PifinaMetricName.INGRESS_JITTER_AVG) {
             if (item.value > 0) {
-                item.value = Math.round(item.value / 1000);
+                item.value = item.value / 1000000000;
             }
         }
         return item

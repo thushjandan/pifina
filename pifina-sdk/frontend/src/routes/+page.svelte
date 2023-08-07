@@ -14,9 +14,13 @@
     <div class="mx-auto max-w-screen-2xl py-6 sm:px-6 lg:px-8">
         <div class="bg-white rounded-lg px-8 py-8 shadow-lg">
             {#await endpointPromise }
-                <p>Loading endpoints...</p>
+                <p class="mb-2 text-lg text-gray-500 md:text-xl dark:text-gray-400">Loading endpoints...</p>
             {:then data }
+                {#if data.length > 0}
                 <Dashboard endpoints={data}></Dashboard>
+                {:else}
+                <p class="mb-2 text-lg text-gray-500 md:text-xl dark:text-gray-400">Currently no probes are sending any metrics. Please refresh page.</p>
+                {/if}
             {:catch error}
                 <p>Loading endpoints failed! Retry later. {error}</p>                
             {/await }

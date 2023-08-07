@@ -3,8 +3,9 @@
 	import Chart from "../../../lib/components/Chart.svelte";
 	import { page } from '$app/stores';
 	import type { MetricItem } from "$lib/models/MetricItem";
-	import { PIFINA_PROBE_CHART_CFG, Y_AXIS_NAME_BYTE_RATE } from "$lib/models/metricNames";
+	import { Y_AXIS_NAME_BYTE_RATE } from "$lib/models/metricNames";
 	import { EndpointType, type DTOTelemetryMessage } from "$lib/models/EndpointModel";
+	import { PIFINA_PROBE_CHART_CFG, getTickFormatFromPifinaChartConfig } from "$lib/config/chartConfig";
 
 	let selectedGroupId = $page.url.searchParams.get('groupId') || 1;
 	let selectedMetric = $page.url.searchParams.get('selectedMetric') || "";
@@ -81,6 +82,7 @@
 	if (selectedMetric.startsWith("PF_EXTRA")) {
 		yAxisName = Y_AXIS_NAME_BYTE_RATE;
 	}
+	let yAxisTickFormat = getTickFormatFromPifinaChartConfig(selectedMetric);
 
     const xScaleOptions: Plot.ScaleOptions = {
 		label: "Timestamp",
@@ -120,12 +122,13 @@
 						x: xScaleOptions,
 						y: {
 							label: yAxisName,
-							grid: true
+							grid: true,
+							tickFormat: yAxisTickFormat
 						},
 						width: cliendScreenWidth,
 						color: {legend: true, type: "categorical"},
 						marks: [
-							Plot.line(metricData, {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: "sessionId", marker: "dot"}),
+							Plot.line(metricData, {filter: (d) => (selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", z: "sessionId", stroke: "sessionId", marker: "dot"}),
 							Plot.tip(metricData, Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (selectedSessionIds.includes(d.sessionId))})),
 						]
 					}} />
@@ -134,7 +137,8 @@
 						x: xScaleOptions,
 						y: {
 							label: yAxisName,
-							grid: true
+							grid: true,
+							tickFormat: yAxisTickFormat
 						},
 						width: cliendScreenWidth,
 						color: {legend: true, type: "categorical"},

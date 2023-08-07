@@ -5,6 +5,7 @@
 	import { sessionFilterStore } from '$lib/stores/sessionFilterStore';
 	import { endpointFilterStore } from '$lib/stores/endpointFilterStore';
 	import { groupIdFilterStore } from '$lib/stores/groupIdFilterStore';
+	import { onDestroy } from 'svelte';
 
     export let chartTitle: string;
     export let screenWidth: number;
@@ -20,19 +21,24 @@
     export let yAxisLabel: string = "unknown";
     export let metricData: MetricItem[];
     export let metricAttributeName: string;
+    export let yAxisTickFormat: string = "s";
     export let disableSeriesFilter = false;
 
     let selectedSessionIds: number[] = [];
     let selectedEndpoint: string = "";
     let selectedGroupId: number = 1;
 
-    sessionFilterStore.subscribe(val => selectedSessionIds = val);
-    endpointFilterStore.subscribe(val => selectedEndpoint = val);
-    groupIdFilterStore.subscribe(val => selectedGroupId = val);
+    const sessionFilterStoreSub = sessionFilterStore.subscribe(val => selectedSessionIds = val);
+    const endpointFilterStoreSub = endpointFilterStore.subscribe(val => selectedEndpoint = val);
+    const groupIdFilterStoreSub = groupIdFilterStore.subscribe(val => selectedGroupId = val);
 
     const openDetailView = () => {
 		window.open(`/dashboard/detail?groupId=${selectedGroupId}&endpoint=${selectedEndpoint}&selectedMetric=${metricAttributeName}`, "_blank");
 	}
+
+    onDestroy(sessionFilterStoreSub);
+    onDestroy(endpointFilterStoreSub);
+    onDestroy(groupIdFilterStoreSub);
 </script>
 
 <div bind:clientWidth={screenWidth} class="mt-8 pt-4">
@@ -53,12 +59,13 @@
         x: xScaleOptions,
         y: {
             label: yAxisLabel,
-            grid: true
+            grid: true,
+            tickFormat: yAxisTickFormat
         },
         width: screenWidth,
         color: {legend: true, type: "categorical"},
         marks: [
-            Plot.line(metricData, {filter: (d) => (disableSeriesFilter || selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", stroke: 'sessionId', marker: "dot"}),
+            Plot.line(metricData, {filter: (d) => (disableSeriesFilter || selectedSessionIds.includes(d.sessionId)), x: "timestamp", y: "value", z: "sessionId", stroke: "sessionId", marker: "dot"}),
             Plot.tip(metricData, Plot.pointerX({x: "timestamp", y: "value", channels: {sessionId: "sessionId"}, filter: (d) => (disableSeriesFilter || selectedSessionIds.includes(d.sessionId))})),
         ]
     }} />

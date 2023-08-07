@@ -1,3 +1,5 @@
+import { tickFormat } from "d3";
+import type { PIFINA_CHART_CONFIG, PIFINA_CHART_CONF_ITEM } from "./dashboardConfigModel";
 import { MetricTypes, PifinaMetricName } from "./metricTypes";
 
 export const PROBE_INGRESS_MATCH_CNT_BYTE = `${PifinaMetricName.INGRESS_MATCH_CNT}${MetricTypes.BYTES}`
@@ -40,8 +42,13 @@ export const PROBE_ETHTOOL_RX_OOB = "rx_out_of_buffer"
 export const Y_AXIS_NAME_BYTE_RATE = "byte/sec"
 export const Y_AXIS_NAME_PKT_RATE = "pkts/sec"
 export const Y_AXIS_NAME_TIME_MS = "ms"
+export const Y_AXIS_NAME_TIME_SEC = "sec"
 export const Y_AXIS_NAME_PKT_COUNT = "pkts"
 export const Y_AXIS_NAME_CELL_COUNT = "cells"
+export const Y_AXIS_NAME_EVENTS_COUNT = "events"
+export const Y_AXIS_NAME_EVENTS_RATE = "events/sec"
+export const Y_AXIS_NAME_CYCLES_RATE = "cycles/sec"
+export const Y_AXIS_NAME_GIGABYTE_RATE = "Gb/sec"
 
 export const PIFINA_DEFAULT_PROBES = [
     PROBE_INGRESS_MATCH_CNT_BYTE,
@@ -52,66 +59,3 @@ export const PIFINA_DEFAULT_PROBES = [
     PROBE_EGRESS_START_CNT_PKTS,
     PROBE_EGRESS_END_CNT_BYTE
 ]
-
-export const PIFINA_PROBE_CHART_CFG = {
-    [PROBE_INGRESS_MATCH_CNT_BYTE]: {
-        yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "Ingress byte counter"
-    },
-    [PROBE_INGRESS_MATCH_CNT_PKT]: {
-        yAxisName: Y_AXIS_NAME_PKT_RATE,
-        title: "Ingress packet counter"
-    },
-    [PROBE_INGRESS_START_HDR_BYTE]: {
-        yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "Start ingress header size counter"
-    },
-    [PROBE_INGRESS_END_HDR_BYTE]: {
-        yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "End ingress header size counter"
-    },
-    [PROBE_EGRESS_START_CNT_BYTE]: {
-        yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "Start egress byte counter"
-    },
-    [PROBE_EGRESS_START_CNT_PKTS]: {
-        yAxisName: Y_AXIS_NAME_PKT_RATE,
-        title: "Egress packet counter"
-    },
-    [PROBE_EGRESS_END_CNT_BYTE]: {
-        yAxisName: Y_AXIS_NAME_BYTE_RATE,
-        title: "End egress byte counter"
-    },
-    [PROBE_INGRESS_JITTER]: {
-        yAxisName: Y_AXIS_NAME_TIME_MS,
-        title: "Ingress inter packet arrival average rate"
-    },
-    [PROBE_TM_INGRESS_DROP_PKT]: {
-        yAxisName: Y_AXIS_NAME_PKT_COUNT,
-        title: "Ingress packet drops from TM perspective"
-    },
-    [PROBE_TM_EGRESS_DROP_PKT]: {
-        yAxisName: Y_AXIS_NAME_PKT_COUNT,
-        title: "Egress packet drops from TM perspective"
-    },
-    [PROBE_TM_INRESS_USAGE_CELLS]: {
-        yAxisName: Y_AXIS_NAME_CELL_COUNT,
-        title: "Port usage count in terms of number of memory cells usage from TM ingress perspective"
-    },
-    [PROBE_TM_ERESS_USAGE_CELLS]: {
-        yAxisName: Y_AXIS_NAME_CELL_COUNT,
-        title: "Port usage count in terms of number of memory cells usage from TM egress perspective"
-    },
-    [PROBE_TM_PIPE_TOTAL_BUF_DROP]: {
-        yAxisName: Y_AXIS_NAME_PKT_COUNT,
-        title: "Number of packets which were dropped because of buffer full condition"
-    },
-    [PROBE_TM_PIPE_IG_FULL_BUF]: {
-        yAxisName: Y_AXIS_NAME_PKT_COUNT,
-        title: "The number of packets which were dropped because of buffer full condition on ingress side"
-    },
-    [PROBE_TM_PIPE_EG_DROP_PKT]: {
-        yAxisName: Y_AXIS_NAME_PKT_COUNT,
-        title: "The total number of packets which were dropped on egress side"
-    },
-}

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import ChartPanel from "$lib/components/ChartPanel.svelte";
+	import { getPifinaChartConfigByMetricName } from "$lib/config/chartConfig";
 	import { PIFINA_DASHBOARD_CONF } from "$lib/config/dashboardConfig";
 	import type { MetricData } from "$lib/models/MetricItem";
-	import { PIFINA_PROBE_CHART_CFG } from "$lib/models/metricNames";
 
     export let metricData: MetricData = {};
 
@@ -38,16 +38,16 @@
                 <div class="mt-8 grid md:grid-cols-2">
                     {#each probeItem as subProbeItem }
                         {#if subProbeItem in metricData }
-                            <ChartPanel chartTitle={PIFINA_PROBE_CHART_CFG[subProbeItem]['title']} metricAttributeName={subProbeItem} 
-                            metricData={metricData[subProbeItem]} yAxisLabel={PIFINA_PROBE_CHART_CFG[subProbeItem]['yAxisName']} 
+                            <ChartPanel chartTitle={getPifinaChartConfigByMetricName(subProbeItem).title} metricAttributeName={subProbeItem} 
+                            metricData={metricData[subProbeItem]} yAxisLabel={getPifinaChartConfigByMetricName(subProbeItem).yAxisName} 
                             screenWidth={clientHalfScreenWidth} disableSeriesFilter={confItem.disableSessionFilter} />
                         {/if}
                     {/each}
                 </div>
                 {:else}
                     {#if probeItem in metricData }
-                        <ChartPanel chartTitle={PIFINA_PROBE_CHART_CFG[probeItem]['title']} metricAttributeName={probeItem} 
-                        metricData={metricData[probeItem]} yAxisLabel={PIFINA_PROBE_CHART_CFG[probeItem]['yAxisName']} 
+                        <ChartPanel chartTitle={getPifinaChartConfigByMetricName(probeItem).title} metricAttributeName={probeItem} 
+                        metricData={metricData[probeItem]} yAxisLabel={getPifinaChartConfigByMetricName(probeItem).yAxisName} 
                         screenWidth={clientFullScreenWidth} disableSeriesFilter={confItem.disableSessionFilter} />
                     {/if}
                 {/if}
