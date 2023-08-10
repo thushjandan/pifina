@@ -4,6 +4,8 @@ SELF_SIGNED_TLS_CERTS=assets/cert.pem
 
 build: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO) $(SELF_SIGNED_TLS_CERTS)
 	mkdir -p builds
+	$(MAKE) -C frontend/ all
+	go mod download
 	go build -o builds/pifina cmd/pifina/main.go
 	go build -o builds/pifina-tofino-probe cmd/pifina-tofino/main.go
 
