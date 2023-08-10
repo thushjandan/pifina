@@ -15,6 +15,23 @@ mv pifina /usr/local/bin
 mv pifina-tofino-probe /usr/local/bin
 ```
 
+### Install from source
+1. Install prequisites
+  * Install the latest [Golang compiler](https://go.dev/doc/install)
+  * Install the latest [Protobuf compiler](https://grpc.io/docs/protoc-installation/)
+  * Install protobuf plugin for golang
+  ```bash
+  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28
+  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+  ```
+  * Install the latest [Node.js LTS](https://nodejs.org/en/download)
+2. Compile using makefile
+```bash
+cd pifina-sdk/
+make build
+```
+Now you can find two binaries in the build folder.
+
 See for more information on [pifina.app](https://pifina.app)
 ## Usage
 1. Instrumentize your P4 application with PIFINA
@@ -29,6 +46,11 @@ user@myworkstation$ pifina generate -h
 3. Start the PIFINA collector on a remote server
 ```bash
 # Quick and dirty way
+# Create self signed certificate
+admin@collector$ mkdir assets
+admin@collector$ openssl req -x509 -newkey  ec -pkeyopt ec_paramgen_curve:prime256v1 \
+	-keyout assets/key.pem -out assets/cert.pem -sha256 -days 3650 -nodes \
+	-subj "/C=CH/O=Pifina/CN=PifinaServer"
 admin@collector$ pifina serve
 # Start collector with a signed TLS certificate
 admin@collector$ pifina serve --key privatekey.pem --cert letsencrypt_cert.pem
