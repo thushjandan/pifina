@@ -5,5 +5,5 @@ theme:
   name: material
   palette:
     primary: indigo
-  logo: frontend/static/android-chrome-192x192.png
-  favicon: frontend/static/favicon.ico
+  logo: docs/assets/logo.png
+  favicon: docs/assets/favicon.ico
