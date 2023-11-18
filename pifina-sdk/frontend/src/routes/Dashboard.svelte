@@ -168,6 +168,7 @@
 <div class="mt-8">
 	<div class="sm:col-span-1">
 		<label for="sessionIds" class="block text-sm font-medium leading-6 text-gray-900">Filter by session ID:</label>
+		{#key sessionIds}
 		<div class="mt-2 flex flex-row">
 			{#each [...sessionIds.values()] as sessionId}
 					<div class="items-center">
@@ -176,6 +177,7 @@
 					</div>
 			{/each}
 		</div>
+		{/key}
 	</div>
 </div>
 {#if selectedEndpoint.type == EndpointType.HOSTTYPE_TOFINO }
