@@ -5,5 +5,5 @@ theme:
   name: material
   palette:
     primary: indigo
-  logo: docs/assets/logo.png
-  favicon: docs/assets/favicon.ico
+  logo: assets/logo.png
+  favicon: assets/favicon.ico
