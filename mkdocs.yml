@@ -3,3 +3,7 @@ site_name: PIFINA Documentation
 site_url: https://pifina.app
 theme:
   name: material
+  palette:
+    primary: indigo
+  logo: frontend/static/android-chrome-192x192.png
+  favicon: frontend/static/favicon.ico
