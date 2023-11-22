@@ -1,5 +1,5 @@
 # Systemarchitecture
-![System Architecture](sysarch.png)
+![System Architecture](images/sysarch.png)
 
 PIFINA consists of 5 components:
 
@@ -19,7 +19,7 @@ The Tofino probe runs in the control plane of the Tofino switch and it collects 
 Runs on the sender or receiver side like on a Linux server. It collects performance counters from the NVIDIA Connect-X network interface cards and forwards them to the Pifina collector
 
 ## Pifina collector
-Exposes a Protobuf API for receiving metrics from Tofino probes and NIC probes. In addition, it serves the web application to manage and to visualise the metrics.
+Exposes a Protobuf API for receiving metrics from Tofino probes and NIC probes. In addition, it serves the web application to visualise the metrics.
 
 ## Pifina web application
 It is a single page application, visualises the metrics. It opens a HTTP/2 Server sent event channel to the Pifina collector. In that way, metrics arrive on the dashboard at almost real time.
