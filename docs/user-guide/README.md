@@ -34,3 +34,32 @@ The key flags defines the name of the header fields to match on for interesting 
     --key hdr.gqtrp.rel:ternary --key hdr.gqtrp.k:ternary \
     --output ~/src/myapp/include
 ```
+
+# Add additional metrics to PIFINA dashboard
+1. Define a new constant with the name of the new metric to match on in the web application in the `pifina-sdk/frontend/src/lib/models/metricNames.ts` file
+```typescript
+export const PROBE_ETHTOOL_RX_OOB = "rx_out_of_buffer"
+```
+2. Add a new property for the new metric in the `PIFINA_CHART_CONFIG` constant located in the `pifina-sdk/frontend/src/lib/config/chartConfig.ts` file.
+```typescript
+export const PIFINA_PROBE_CHART_CFG: PIFINA_CHART_CONFIG = {
+    // ...
+    [pb.PROBE_ETHTOOL_RX_OOB]: {
+        yAxisName: pb.Y_AXIS_NAME_EVENTS_COUNT,
+        title: "Out of buffer events for RX"
+    },
+```
+  * Set the title of the chart with the `title` property
+  * Set the y-axis title with `yAxisName` property.
+  * You can optionally change the tick format of the x axis using the propery `tickFormat`. You can find the available options for the tick format on the [D3 site](https://github.com/d3/d3-format#api-reference)
+3. Afterwards, you need to define the position of the chart in the dashboard in the `pifina-sdk/frontend/src/lib/config/dashboardConfig.ts` file.
+  * If you use an two-sized array, then the chart will share the row with another chart. If you directly define the chart name without an inner array, then the chart will use the full row.
+```typescript
+port const PIFINA_ETHTOOL_CHART_ORDER = [
+    // ...
+    // 2 charts in 1 row
+    [PROBE_ETHTOOL_RX_PAUSE, PROBE_ETHTOOL_TX_PAUSE],
+    // 1 chart in 1 row
+    PROBE_ETHTOOL_RX_OOB
+]
+```
