@@ -24,6 +24,8 @@ PIFINA is able to monitor and visualise any registers in use. You can use this f
 6. Define the register index position, which you would like to monitor.
 5. Click on `Add` button
 
+![View register in dashboard](images/scrn-app-reg-dash.png)
+
 ## Generate P4 skeleton application by PIFINA cli
 Use the flag `--gen-skeleton` to generate a skeleton for a P4 application enriched with PIFINA.
 The key flags defines the name of the header fields to match on for interesting packets.
