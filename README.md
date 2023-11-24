@@ -3,7 +3,7 @@
 ![GitHub release](https://img.shields.io/github/v/release/thushjandan/pifina)
 
 # Performance Introspector for in-network applications (PIFINA)
-This is a performance framework to introspect in-network applications written in [P4 programming language](p4.org) running on `Intel Tofino` powered switches. The framework has been developed and tested for the Intel Tofino architecture version 2, but it is backwards compatible to Tofino 1.
+This is a performance framework to introspect in-network applications written in [P4 programming language](https://p4.org) running on `Intel Tofino` powered switches. The framework has been developed and tested for the Intel Tofino architecture version 2, but it is backwards compatible to Tofino 1.
 
 ## Installation
 1. Download compiled PIFINA binaries from [Github](https://github.com/thushjandan/pifina/releases/latest)
