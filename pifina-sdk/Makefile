@@ -1,7 +1,10 @@
+# Copyright (c) 2023 Thushjandan Ponnudurai
+# This software is released under the MIT License.
+# https://opensource.org/licenses/MIT
+
 BFRT_COMPILED_PROTO=internal/dataplane/tofino/protos/bfruntime/bfruntime_grpc.pb.go
 PIFINA_COMPILED_PROTO=pkg/model/protos/pifina/pifina.pb.go
 SELF_SIGNED_TLS_CERTS=assets/cert.pem
-BF_SDK_PATH=
 
 build: $(BFRT_COMPILED_PROTO) $(PIFINA_COMPILED_PROTO) $(SELF_SIGNED_TLS_CERTS)
 	mkdir -p builds

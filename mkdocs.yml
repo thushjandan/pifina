@@ -1,6 +1,7 @@
 ---
 site_name: PIFINA Documentation
 site_url: https://pifina.app
+repo_url: https://github.com/thushjandan/pifina
 theme:
   name: material
   palette:
